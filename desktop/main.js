@@ -152,13 +152,17 @@ function isCameraPermission(permission) {
   return permission === 'media' || permission === 'camera' || permission === 'microphone';
 }
 
+function isMainAppPermission(permission) {
+  return isCameraPermission(permission) || permission === 'geolocation';
+}
+
 function configureMainSessionPermissions() {
   const ses = session.defaultSession;
   if (!ses || ses.__mineradioPermissionsReady) return;
   ses.__mineradioPermissionsReady = true;
   ses.setPermissionRequestHandler((webContents, permission, callback) => {
     const ownerUrl = webContents && webContents.getURL ? webContents.getURL() : '';
-    if (isCameraPermission(permission) && (isMainWindowWebContents(webContents) || isLocalMineradioUrl(ownerUrl))) {
+    if (isMainAppPermission(permission) && (isMainWindowWebContents(webContents) || isLocalMineradioUrl(ownerUrl))) {
       callback(true);
       return;
     }
@@ -167,7 +171,7 @@ function configureMainSessionPermissions() {
   if (ses.setPermissionCheckHandler) {
     ses.setPermissionCheckHandler((webContents, permission, requestingOrigin) => {
       const ownerUrl = (webContents && webContents.getURL ? webContents.getURL() : '') || requestingOrigin || '';
-      return isCameraPermission(permission) && (isMainWindowWebContents(webContents) || isLocalMineradioUrl(ownerUrl));
+      return isMainAppPermission(permission) && (isMainWindowWebContents(webContents) || isLocalMineradioUrl(ownerUrl));
     });
   }
 }

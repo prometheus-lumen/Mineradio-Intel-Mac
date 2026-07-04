@@ -59,7 +59,10 @@
       "icon": "build/icon.icns",
       "category": "public.app-category.music",
       "extendInfo": {
-        "NSCameraUsageDescription": "Mineradio 需要摄像头权限用于手势触碰控制粒子视觉。"
+        "NSCameraUsageDescription": "Mineradio 需要摄像头权限用于手势触碰控制粒子视觉。",
+        "NSLocationUsageDescription": "Mineradio 需要定位权限用于获取当前位置天气并生成天气电台。",
+        "NSLocationWhenInUseUsageDescription": "Mineradio 需要在使用期间获取当前位置天气并生成天气电台。",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Mineradio 仅在使用期间获取当前位置天气，不会在后台持续定位。"
       }
     },
     "nsis": {

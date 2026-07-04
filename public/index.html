@@ -261,6 +261,7 @@ body.home-wallpaper-preview #canvas-container{filter:none}
 .home-hero::after{content:'';position:absolute;left:28px;right:28px;bottom:22px;height:1px;background:linear-gradient(90deg,color-mix(in srgb,var(--home-accent) 0%,transparent),color-mix(in srgb,var(--home-accent) 52%,transparent),rgba(36,66,255,.24),rgba(248,244,238,.18),color-mix(in srgb,var(--home-accent) 0%,transparent));opacity:.82;pointer-events:none}
 .home-hero-inner{position:relative;z-index:2;height:100%;display:grid;grid-template-columns:minmax(0,1.16fr) minmax(150px,.64fr);grid-template-rows:auto auto auto auto minmax(150px,1fr);column-gap:18px}
 .home-hero-inner.home-construction-inner{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:18px;padding:4px 2px;min-height:100%}
+.home-hero-inner.home-weather-inner{--weather-beat:0;--weather-bass:0;--weather-energy:0;grid-template-rows:auto auto auto auto 1fr;align-content:start}
 .home-kicker{grid-column:1;font-size:10px;font-weight:780;letter-spacing:.18em;color:color-mix(in srgb,var(--home-accent) 62%,rgba(255,255,255,.36));text-transform:uppercase;margin-bottom:14px}
 .home-title{grid-column:1;font-size:clamp(34px,4.6vw,58px);line-height:.98;font-weight:760;letter-spacing:0;color:rgba(255,255,255,.98);max-width:380px;text-shadow:0 10px 36px rgba(0,0,0,.26)}
 .home-title.home-construction-title{max-width:620px;font-size:clamp(32px,4.5vw,64px);line-height:1.08}
@@ -272,8 +273,18 @@ body.home-wallpaper-preview #canvas-container{filter:none}
 .home-chip:hover{background:color-mix(in srgb,var(--home-accent) 10%,transparent);border-color:color-mix(in srgb,var(--home-accent) 38%,rgba(255,255,255,.10));color:#fff;box-shadow:0 10px 26px color-mix(in srgb,var(--home-accent) 8%,transparent);transform:translateY(-1px)}
 .home-console-chip{height:36px;border-color:color-mix(in srgb,var(--home-accent) 34%,rgba(255,255,255,.12));background:color-mix(in srgb,var(--home-accent) 12%,rgba(255,255,255,.055));color:#fff}
 .home-visual{grid-column:2;grid-row:2 / span 2;position:relative;align-self:center;justify-self:end;width:100%;max-width:300px;height:74px;margin-top:0;pointer-events:none;filter:drop-shadow(0 18px 34px rgba(0,0,0,.28))}
+.home-weather-inner .home-visual{grid-row:1 / span 5;height:300px;max-width:286px;align-self:center;filter:drop-shadow(0 24px 48px rgba(0,0,0,.34))}
 .home-visual.generated .home-sleeve,.home-visual.generated .home-disc{display:none}
 .home-radio-img{display:none}
+.home-now-cover{position:absolute;right:0;top:50%;width:min(258px,100%);aspect-ratio:1;border-radius:28px;background:linear-gradient(145deg,rgba(255,255,255,.11),rgba(255,255,255,.035));border:1px solid rgba(255,255,255,.12);box-shadow:0 28px 72px rgba(0,0,0,.42),0 0 calc(18px + var(--weather-beat) * 30px) color-mix(in srgb,var(--home-accent) 16%,transparent),inset 0 1px 0 rgba(255,255,255,.14);overflow:hidden;transform:translateY(-50%) scale(calc(1 + var(--weather-beat) * .035 + var(--weather-bass) * .025));transition:transform .08s linear,box-shadow .08s linear}
+.home-now-cover-art{position:absolute;inset:0;background:radial-gradient(circle at 34% 26%,rgba(255,255,255,.22),transparent 28%),linear-gradient(135deg,color-mix(in srgb,var(--home-accent) 40%,#191b22),rgba(6,7,10,.92));background-size:cover;background-position:center;filter:saturate(calc(1.04 + var(--weather-energy) * .18)) brightness(calc(.92 + var(--weather-beat) * .08));transform:scale(calc(1.012 + var(--weather-bass) * .025));transition:background-image .45s ease,filter .10s linear,transform .10s linear}
+.home-now-cover-art:not(.has-cover)::before{content:'';position:absolute;inset:22%;border-radius:50%;background:repeating-radial-gradient(circle,rgba(255,255,255,.15) 0 1px,transparent 1px 9px),conic-gradient(from 180deg,var(--home-accent),rgba(244,210,138,.82),rgba(36,66,255,.68),var(--home-accent));box-shadow:inset 0 0 0 18px rgba(6,7,10,.48)}
+.home-now-cover::before{content:'';position:absolute;inset:0;z-index:1;background:linear-gradient(145deg,rgba(255,255,255,.18),transparent 30%,rgba(0,0,0,.10) 58%,rgba(0,0,0,.62));pointer-events:none}
+.home-now-cover::after{content:'';position:absolute;left:-18%;right:-18%;bottom:-18%;z-index:2;height:54%;background:linear-gradient(180deg,transparent,rgba(4,5,8,.82));filter:blur(10px);pointer-events:none}
+.home-now-cover-meta{position:absolute;z-index:3;left:18px;right:18px;bottom:18px;min-width:0}
+.home-now-cover-kicker{font-size:9.5px;font-weight:780;letter-spacing:.16em;text-transform:uppercase;color:color-mix(in srgb,var(--home-accent) 68%,rgba(255,255,255,.52));margin-bottom:6px;text-shadow:0 0 18px color-mix(in srgb,var(--home-accent) 24%,transparent)}
+.home-now-cover-title{font-size:18px;line-height:1.16;font-weight:780;color:rgba(255,255,255,.96);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 10px 24px rgba(0,0,0,.54)}
+.home-now-cover-artist{margin-top:5px;font-size:11px;line-height:1.24;font-weight:620;color:rgba(255,255,255,.60);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .home-sleeve{position:absolute;left:0;bottom:8px;width:67%;height:56%;border-radius:22px;background:linear-gradient(135deg,rgba(0,245,212,.70),rgba(36,66,255,.44) 48%,rgba(248,244,238,.30));box-shadow:0 20px 52px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.20);transform:rotate(-8deg);overflow:hidden}
 .home-sleeve::before{content:'';position:absolute;inset:14px;border-radius:16px;background:linear-gradient(135deg,rgba(255,255,255,.18),rgba(0,0,0,.18)),repeating-linear-gradient(90deg,rgba(255,255,255,.18) 0 2px,transparent 2px 18px);opacity:.72}
 .home-sleeve::after{content:'';position:absolute;left:18px;right:18px;bottom:18px;height:12px;border-radius:999px;background:rgba(10,10,14,.44);box-shadow:0 -24px 0 rgba(10,10,14,.16)}
@@ -297,14 +308,36 @@ body.home-wallpaper-preview #canvas-container{filter:none}
 .home-section-head{display:flex;align-items:end;justify-content:space-between;gap:12px;min-height:38px}
 .home-section-title{font-size:13px;font-weight:760;color:rgba(255,255,255,.84);letter-spacing:.04em}
 .home-section-note{font-size:11px;color:rgba(255,255,255,.38);white-space:nowrap}
+.home-grid-wrap{position:relative;min-height:0;display:grid;grid-template-rows:auto 1fr;gap:8px}
+.home-grid-actions{display:flex;justify-content:flex-end;min-height:28px}
 .home-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.home-grid-restore{display:none;height:28px;padding:0 10px;border-radius:999px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.045);color:rgba(255,255,255,.58);font-family:inherit;font-size:10.5px;font-weight:680;cursor:pointer;transition:background .18s,border-color .18s,color .18s,transform .18s}
+.home-grid-restore.show{display:inline-flex;align-items:center}
+.home-grid-restore:hover{background:rgba(255,255,255,.075);border-color:color-mix(in srgb,var(--home-accent) 34%,rgba(255,255,255,.12));color:#fff;transform:translateY(-1px)}
+.home-card-menu,.home-restore-pop{z-index:62;min-width:92px;padding:6px;border-radius:12px;border:1px solid rgba(255,255,255,.10);background:linear-gradient(145deg,rgba(22,23,27,.94),rgba(8,9,13,.96));box-shadow:0 18px 54px rgba(0,0,0,.46),inset 0 1px 0 rgba(255,255,255,.07);backdrop-filter:blur(24px) saturate(1.12);-webkit-backdrop-filter:blur(24px) saturate(1.12)}
+.home-card-menu{position:absolute;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .14s,visibility .14s}
+.home-card-menu.show{opacity:1;visibility:visible;pointer-events:auto}
+.home-card-menu button,.home-restore-pop button{width:100%;min-height:32px;border:0;border-radius:10px;background:transparent;color:rgba(255,255,255,.74);font-family:inherit;font-size:11.5px;font-weight:680;text-align:left;padding:0 10px;cursor:pointer;transition:background .16s,color .16s}
+.home-card-menu button:hover,.home-restore-pop button:hover{background:rgba(255,255,255,.08);color:#fff}
+.home-card-menu button.danger{color:rgba(255,185,185,.88)}
+.home-card-menu button.danger:hover{background:rgba(255,94,94,.13);color:#fff}
+.home-restore-pop{position:absolute;right:0;top:36px;display:none;min-width:174px;max-width:230px}
+.home-restore-pop.show{display:block}
+.home-restore-title{padding:5px 10px 7px;font-size:10px;font-weight:780;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.38)}
+.home-restore-empty{padding:8px 10px 10px;font-size:11px;line-height:1.45;color:rgba(255,255,255,.42)}
 .home-card{--tone-a:#00f5d4;--tone-b:#2442ff;--tone-c:#f8f4ee;position:relative;min-height:152px;border:1px solid color-mix(in srgb,var(--home-accent) 10%,rgba(255,255,255,.085));border-radius:22px;background:linear-gradient(142deg,rgba(18,21,26,.66),rgba(8,9,13,.76));box-shadow:0 20px 64px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.060);backdrop-filter:blur(24px) saturate(1.12);-webkit-backdrop-filter:blur(24px) saturate(1.12);padding:17px;overflow:hidden;color:#fff;text-align:left;font-family:inherit;cursor:pointer;transition:transform .22s cubic-bezier(.16,1,.3,1),border-color .22s,background .22s,box-shadow .22s}
+.home-card[data-home-card]{cursor:grab;touch-action:none}
+.home-card[data-home-card]:active{cursor:grabbing}
+.home-card.home-card-dragging{position:fixed!important;z-index:260!important;opacity:1;pointer-events:none;box-shadow:0 30px 90px rgba(0,0,0,.42),0 0 34px color-mix(in srgb,var(--home-accent) 14%,transparent),inset 0 1px 0 rgba(255,255,255,.10);transition:box-shadow .18s cubic-bezier(.16,1,.3,1)}
+.home-card-placeholder{min-height:152px;border-radius:22px;border:1px dashed color-mix(in srgb,var(--home-accent) 28%,rgba(255,255,255,.12));background:color-mix(in srgb,var(--home-accent) 6%,rgba(255,255,255,.025));box-shadow:inset 0 1px 0 rgba(255,255,255,.055);opacity:.44}
+.home-card.home-card-hidden{display:none!important}
 .home-card[data-home-tone="mix"]{--tone-a:#9db8cf;--tone-b:#00f5d4;--tone-c:#2442ff}
 .home-card[data-home-tone="local"]{--tone-a:#f8f4ee;--tone-b:#00f5d4;--tone-c:#2442ff}
 .home-card[data-home-tone="library"]{--tone-a:#00f5d4;--tone-b:#f8f4ee;--tone-c:#2442ff}
 .home-card::before{content:'';position:absolute;inset:0;background:linear-gradient(118deg,color-mix(in srgb,var(--tone-a) 22%,transparent),transparent 38%,color-mix(in srgb,var(--tone-b) 16%,transparent) 74%,transparent),linear-gradient(90deg,rgba(255,255,255,.035) 0 1px,transparent 1px 38px);opacity:.86;pointer-events:none}
 .home-card::after{content:'';position:absolute;right:114px;bottom:18px;width:38px;height:70px;border-radius:999px;background:repeating-linear-gradient(0deg,color-mix(in srgb,var(--tone-c) 64%,rgba(255,255,255,.26)) 0 4px,transparent 4px 10px);opacity:.20;transform:skewX(-10deg);pointer-events:none}
 .home-card:hover{transform:translateY(-3px);border-color:color-mix(in srgb,var(--tone-a) 42%,rgba(255,255,255,.18));background:linear-gradient(142deg,rgba(36,33,39,.72),rgba(10,10,14,.84));box-shadow:0 28px 84px rgba(0,0,0,.36),0 0 34px color-mix(in srgb,var(--tone-a) 16%,transparent),inset 0 1px 0 rgba(255,255,255,.085)}
+.home-card.home-card-dragging:hover{transform:var(--home-drag-transform,scale(1.025))}
 body.empty-home-active .home-card{animation:home-card-float 7.4s ease-in-out infinite}
 body.empty-home-active .home-card:hover{animation:none}
 body.empty-home-active .home-card:nth-of-type(2){animation-delay:-1.4s}
@@ -321,7 +354,9 @@ body.empty-home-active .home-visual{animation:home-visual-drift 8.8s ease-in-out
 .home-card-art{position:absolute;z-index:1;right:13px;bottom:13px;width:108px;height:108px;border-radius:24px;background:linear-gradient(135deg,color-mix(in srgb,var(--tone-a) 78%,#14141a),color-mix(in srgb,var(--tone-b) 68%,#09090d));background-size:cover;background-position:center;box-shadow:0 18px 50px rgba(0,0,0,.36),inset 0 1px 0 rgba(255,255,255,.16);transform:rotate(3deg);overflow:hidden}
 .home-card-art:not(.has-cover)::before{content:'';position:absolute;inset:18px;border-radius:50%;background:repeating-radial-gradient(circle,rgba(255,255,255,.16) 0 1px,transparent 1px 8px),conic-gradient(from 180deg,var(--tone-a),var(--tone-b),var(--tone-c),var(--tone-a));box-shadow:inset 0 0 0 14px rgba(5,5,8,.44),0 12px 28px rgba(0,0,0,.26)}
 .home-card-art::after{content:'';position:absolute;inset:0;background:linear-gradient(145deg,rgba(255,255,255,.12),transparent 42%,rgba(0,0,0,.28));pointer-events:none}
-.home-rail{align-self:stretch;min-height:0;display:grid;grid-template-rows:auto 1fr;gap:12px}
+.home-rail{align-self:end;min-height:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.home-recent-card{grid-column:1;min-height:152px}
+.home-recent-card .home-card-label{color:color-mix(in srgb,var(--home-accent) 70%,#fff)}
 .home-tile-row{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;min-height:0}
 .home-tile{--tone-a:#00f5d4;--tone-b:#2442ff;--tone-c:#f8f4ee;position:relative;min-width:0;min-height:166px;border:1px solid color-mix(in srgb,var(--home-accent) 9%,rgba(255,255,255,.075));border-radius:20px;background:linear-gradient(145deg,rgba(255,255,255,.060),rgba(255,255,255,.025));box-shadow:0 16px 50px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.052);backdrop-filter:blur(20px) saturate(1.10);-webkit-backdrop-filter:blur(20px) saturate(1.10);padding:10px;color:#fff;text-align:left;font-family:inherit;cursor:pointer;transition:transform .2s,border-color .2s,background .2s,box-shadow .2s;overflow:hidden}
 .home-tile[data-home-tone="search"],.home-tile[data-home-tone="playlist"]{--tone-a:#9db8cf;--tone-b:#00f5d4;--tone-c:#2442ff}
@@ -344,9 +379,11 @@ body.empty-home-active .home-visual{animation:home-visual-drift 8.8s ease-in-out
 @media (max-width:760px){#empty-home{top:150px;bottom:56px;width:calc(100vw - 40px)}.empty-home-shell{grid-template-columns:1fr;grid-template-rows:auto auto 1fr;overflow:auto;padding-bottom:4px}.home-hero{grid-row:auto;min-height:344px}.home-mosaic{height:172px;min-height:150px}.home-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.home-tile-row{grid-template-columns:repeat(3,minmax(0,1fr))}}
 body.empty-home-active.controls-visible #empty-home{bottom:128px}
 @media (max-height:760px){body.empty-home-active.controls-visible #empty-home{bottom:112px}}
-@media (max-width:620px){#empty-home{top:146px;bottom:44px;width:calc(100vw - 24px)}.home-hero{padding:20px;border-radius:22px}.home-hero-inner{display:flex;flex-direction:column}.home-visual{display:none}.home-mosaic{display:none}.home-grid{grid-template-columns:1fr}.home-tile-row{grid-template-columns:repeat(2,minmax(0,1fr))}.home-tile-cover{height:auto;aspect-ratio:1}.home-tile-sub{display:block}.home-card-art{width:88px;height:88px}.home-card-title,.home-card-sub{max-width:68%}}
+@media (max-width:620px){#empty-home{top:146px;bottom:44px;width:calc(100vw - 24px)}.home-hero{padding:20px;border-radius:22px}.home-hero-inner{display:flex;flex-direction:column}.home-visual{display:none}.home-mosaic{display:none}.home-grid,.home-rail{grid-template-columns:1fr}.home-tile-row{grid-template-columns:repeat(2,minmax(0,1fr))}.home-tile-cover{height:auto;aspect-ratio:1}.home-tile-sub{display:block}.home-card-art{width:88px;height:88px}.home-card-title,.home-card-sub{max-width:68%}}
 .home-visual.generated{height:74px!important;max-width:300px!important;align-self:center!important}
+.home-weather-inner .home-visual.generated{height:300px!important;max-width:286px!important;align-self:center!important}
 @media (max-height:760px){.home-visual.generated{height:64px!important;max-width:260px!important}}
+@media (max-height:760px){.home-weather-inner .home-visual.generated{height:238px!important;max-width:238px!important}}
 
 /* ---------- 顶部右侧按钮 ---------- */
 #top-right{position:fixed;z-index:10;top:24px;right:24px;display:flex;align-items:center;gap:10px}
@@ -1951,59 +1988,77 @@ html.control-glass-svg-ok #visual-guide-btn:hover{
 <section id="empty-home" aria-label="Mineradio home">
   <div class="empty-home-shell">
     <div class="home-hero">
-      <div class="home-hero-inner home-construction-inner">
-        <div class="home-title home-construction-title">🚧此处施工，敬请期待🚧</div>
-        <button class="home-chip home-console-chip" type="button" onclick="openHomePlayerConsole()">展开播放器控制台</button>
+      <div class="home-hero-inner home-weather-inner" id="home-weather-hero">
+        <div class="home-kicker" id="home-weather-kicker">Weather Pulse</div>
+        <div class="home-title" id="home-weather-title">今日天气提示</div>
+        <div class="home-sub" id="home-subtitle">正在整理你所在城市的天气和适合当下的音乐。</div>
+        <div class="home-weather-meta" id="home-weather-meta"></div>
+        <div class="home-quick-row">
+          <button class="home-chip home-console-chip" type="button" data-home-radio-start>播放天气电台</button>
+        </div>
+        <div class="home-visual generated" id="home-weather-visual" aria-hidden="true">
+          <div class="home-now-cover" id="home-now-cover">
+            <div class="home-now-cover-art" id="home-now-cover-art"></div>
+            <div class="home-now-cover-meta">
+              <div class="home-now-cover-kicker" id="home-now-cover-kicker">Now Playing</div>
+              <div class="home-now-cover-title" id="home-now-cover-title">暂无播放</div>
+              <div class="home-now-cover-artist" id="home-now-cover-artist">播放一首歌后显示专辑封面</div>
+            </div>
+          </div>
+          <div class="home-wave-track" id="home-wave-track"></div>
+        </div>
       </div>
     </div>
 
-    <div class="home-grid">
-      <button class="home-card" data-home-tone="library" type="button" onclick="openHomeLibrary()">
-        <div class="home-card-label">Library</div>
-        <div class="home-card-title" id="home-weather-card-title">我的歌单</div>
-        <div class="home-card-sub" id="home-weather-card-sub">打开左侧歌单库</div>
-        <div class="home-card-art" id="home-weather-art"></div>
-      </button>
-      <button class="home-card" data-home-tone="mix" type="button" onclick="playHomeSong(0)">
-        <div class="home-card-label">Daily</div>
-        <div class="home-card-title" id="home-daily-title">每日推荐</div>
-        <div class="home-card-sub" id="home-daily-sub">登录后同步你的今日歌曲</div>
-        <div class="home-card-art" id="home-daily-art"></div>
-      </button>
-      <button class="home-card" data-home-tone="playlist" type="button" onclick="playHomeSong(1)">
-        <div class="home-card-label">Song</div>
-        <div class="home-card-title" id="home-private-title">私人电台</div>
-        <div class="home-card-sub" id="home-private-sub">从你的推荐和歌单里开播</div>
-        <div class="home-card-art" id="home-private-art"></div>
-      </button>
-      <button class="home-card" data-home-tone="mix" type="button" onclick="playHomeRecent()">
-        <div class="home-card-label">Continue</div>
-        <div class="home-card-title" id="home-continue-title">继续听</div>
-        <div class="home-card-sub" id="home-continue-sub">最近播放会出现在这里</div>
-        <div class="home-card-art" id="home-continue-art"></div>
-      </button>
-      <button class="home-card" data-home-tone="local" type="button" onclick="openHomeInsight()">
-        <div class="home-card-label">Profile</div>
-        <div class="home-card-title" id="home-profile-title">听歌画像</div>
-        <div class="home-card-sub" id="home-profile-sub">播放几首后生成偏好</div>
-        <div class="home-card-art" id="home-profile-art"></div>
-      </button>
-      <button class="home-card" data-home-tone="local" type="button" onclick="playHomeSong(2)">
-        <div class="home-card-label">Song</div>
-        <div class="home-card-title" id="home-library-title">常听歌手</div>
-        <div class="home-card-sub" id="home-library-sub">你的偏好会在这里汇总</div>
-        <div class="home-card-art" id="home-library-art"></div>
-      </button>
+    <div class="home-grid-wrap">
+      <div class="home-grid-actions">
+        <button id="home-card-restore-btn" class="home-grid-restore" type="button" onclick="toggleHomeRestoreMenu(event)">恢复模块</button>
+      </div>
+      <div id="home-restore-pop" class="home-restore-pop" onclick="event.stopPropagation()"></div>
+      <div class="home-grid" id="home-card-grid">
+        <button class="home-card" data-home-card="library" data-home-tone="library" type="button" onclick="openHomeLibrary()">
+          <div class="home-card-label">Library</div>
+          <div class="home-card-title" id="home-weather-card-title">我的歌单</div>
+          <div class="home-card-sub" id="home-weather-card-sub">打开左侧歌单库</div>
+          <div class="home-card-art" id="home-weather-art"></div>
+        </button>
+        <button class="home-card" data-home-card="daily" data-home-tone="mix" type="button" onclick="playHomeSong(0)">
+          <div class="home-card-label">Daily</div>
+          <div class="home-card-title" id="home-daily-title">每日推荐</div>
+          <div class="home-card-sub" id="home-daily-sub">登录后同步你的今日歌曲</div>
+          <div class="home-card-art" id="home-daily-art"></div>
+        </button>
+        <button class="home-card" data-home-card="private" data-home-tone="playlist" type="button" onclick="playHomeSong(1)">
+          <div class="home-card-label">Song</div>
+          <div class="home-card-title" id="home-private-title">私人电台</div>
+          <div class="home-card-sub" id="home-private-sub">从你的推荐和歌单里开播</div>
+          <div class="home-card-art" id="home-private-art"></div>
+        </button>
+        <button class="home-card" data-home-card="profile" data-home-tone="local" type="button" onclick="openHomeInsight()">
+          <div class="home-card-label">Profile</div>
+          <div class="home-card-title" id="home-profile-title">听歌画像</div>
+          <div class="home-card-sub" id="home-profile-sub">播放几首后生成偏好</div>
+          <div class="home-card-art" id="home-profile-art"></div>
+        </button>
+        <button class="home-card" data-home-card="more" data-home-tone="local" type="button" onclick="playHomeSong(2)">
+          <div class="home-card-label">Song</div>
+          <div class="home-card-title" id="home-library-title">常听歌手</div>
+          <div class="home-card-sub" id="home-library-sub">你的偏好会在这里汇总</div>
+          <div class="home-card-art" id="home-library-art"></div>
+        </button>
+      </div>
     </div>
 
     <div class="home-rail">
-      <div class="home-section-head">
-        <div class="home-section-title" id="home-rail-title">为你准备</div>
-        <div class="home-section-note" id="home-rail-note">正在整理推荐</div>
-      </div>
-      <div id="home-tile-row" class="home-tile-row"></div>
+      <button class="home-card home-recent-card" data-home-tone="mix" type="button" onclick="playHomeRecent()">
+        <div class="home-card-label">Recent</div>
+        <div class="home-card-title" id="home-continue-title">最近听过</div>
+        <div class="home-card-sub" id="home-continue-sub">最近播放会出现在这里</div>
+        <div class="home-card-art" id="home-continue-art"></div>
+      </button>
     </div>
   </div>
+  <div id="home-card-menu" class="home-card-menu" onclick="event.stopPropagation()"></div>
 </section>
 
 <!-- 顶部右侧 (只保留用户) -->
@@ -2787,12 +2842,20 @@ var homeDiscoverState = { loading: false, loaded: false, loggedIn: false, mode: 
 var homeDiscoverToken = 0;
 var homeVisualPresetActive = false;
 var homeVisualPrevPreset = 0;
+var HOME_CARD_LAYOUT_KEY = 'mineradio-home-card-layout-v1';
+var HOME_CARD_DEFAULT_ORDER = ['library', 'daily', 'private', 'profile', 'more'];
+var HOME_CARD_LABELS = { library: '我的歌单', daily: '每日推荐', private: '私人电台', profile: '听歌画像', more: '常听歌手' };
+var homeCardLayoutState = null;
+var homeCardDragActive = false;
 var HOME_LISTEN_STATS_KEY = 'mineradio-listen-stats-v1';
 var HOME_WEATHER_CITY_KEY = 'mineradio-weather-city';
 var homeWeatherRadioState = { loading: false, loaded: false, city: localStorage.getItem(HOME_WEATHER_CITY_KEY) || '上海', weather: null, radio: null, error: '', updatedAt: 0 };
 var homeWeatherToken = 0;
 var homeWeatherLoadTimer = null;
 var homeWeatherLoadPromise = null;
+var homeWeatherStartupLocateDone = false;
+var homeWeatherPrewarmStarted = false;
+var homeWeatherSilentPrewarmActive = false;
 var weatherRadioStartBusy = false;
 var activeRadioContext = null;
 var listenStatsState = loadListenStatsState();
@@ -3416,6 +3479,7 @@ var IMMERSIVE_CURSOR_HIDE_DELAY = 5000;
 var fxPanelPinned = false;
 var fxPanelClickHoldUntil = 0;
 var playlistPanelPinned = readBooleanPreference(PLAYLIST_PANEL_PIN_STORE_KEY, false);
+var playlistPanelOpenGuardUntil = 0;
 var userCapsuleAutoHide = readBooleanPreference(USER_CAPSULE_AUTO_HIDE_STORE_KEY, false);
 var fxFabAutoHide = readBooleanPreference(FX_FAB_AUTO_HIDE_STORE_KEY, false);
 var fxFabAutoHideRevealArmed = true;
@@ -15494,6 +15558,438 @@ function setHomeArt(id, url, size) {
   el.classList.toggle('has-cover', !!src);
   el.classList.toggle('home-skeleton', !src && homeDiscoverState.loading);
 }
+function homeCardLabel(id) {
+  return HOME_CARD_LABELS[id] || id;
+}
+function normalizeHomeCardLayout(raw) {
+  var order = raw && Array.isArray(raw.order) ? raw.order.filter(function(id){ return HOME_CARD_DEFAULT_ORDER.indexOf(id) >= 0; }) : [];
+  HOME_CARD_DEFAULT_ORDER.forEach(function(id){ if (order.indexOf(id) < 0) order.push(id); });
+  var hidden = raw && Array.isArray(raw.hidden) ? raw.hidden.filter(function(id){ return HOME_CARD_DEFAULT_ORDER.indexOf(id) >= 0; }) : [];
+  return { order: order.slice(0, HOME_CARD_DEFAULT_ORDER.length), hidden: Array.from(new Set(hidden)) };
+}
+function readHomeCardLayout() {
+  if (homeCardLayoutState) return homeCardLayoutState;
+  try {
+    homeCardLayoutState = normalizeHomeCardLayout(JSON.parse(localStorage.getItem(HOME_CARD_LAYOUT_KEY) || '{}'));
+  } catch (e) {
+    homeCardLayoutState = normalizeHomeCardLayout(null);
+  }
+  return homeCardLayoutState;
+}
+function saveHomeCardLayout() {
+  try { localStorage.setItem(HOME_CARD_LAYOUT_KEY, JSON.stringify(readHomeCardLayout())); } catch (e) {}
+}
+function applyHomeCardLayout() {
+  var grid = document.getElementById('home-card-grid');
+  if (!grid) return;
+  var state = readHomeCardLayout();
+  var cards = {};
+  Array.prototype.forEach.call(grid.querySelectorAll('.home-card[data-home-card]'), function(card){
+    cards[card.getAttribute('data-home-card')] = card;
+  });
+  state.order.forEach(function(id){
+    if (cards[id]) grid.appendChild(cards[id]);
+  });
+  Object.keys(cards).forEach(function(id){
+    cards[id].classList.toggle('home-card-hidden', state.hidden.indexOf(id) >= 0);
+  });
+  var restore = document.getElementById('home-card-restore-btn');
+  if (restore) {
+    var changedOrder = state.order.join('|') !== HOME_CARD_DEFAULT_ORDER.join('|');
+    var changed = changedOrder || state.hidden.length > 0;
+    restore.classList.toggle('show', changed);
+    restore.textContent = state.hidden.length ? ('恢复模块 · ' + state.hidden.length) : '恢复布局';
+  }
+  renderHomeRestoreMenu();
+}
+function setHomeCardOrderFromDom() {
+  var grid = document.getElementById('home-card-grid');
+  if (!grid) return;
+  var state = readHomeCardLayout();
+  state.order = Array.prototype.map.call(grid.querySelectorAll('.home-card[data-home-card]'), function(card){
+    return card.getAttribute('data-home-card');
+  }).filter(function(id){ return HOME_CARD_DEFAULT_ORDER.indexOf(id) >= 0; });
+  HOME_CARD_DEFAULT_ORDER.forEach(function(id){ if (state.order.indexOf(id) < 0) state.order.push(id); });
+  saveHomeCardLayout();
+  applyHomeCardLayout();
+}
+function placeFloatingPanel(panel, x, y) {
+  if (!panel) return;
+  var home = document.getElementById('empty-home');
+  var hostRect = home ? home.getBoundingClientRect() : { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+  panel.style.left = '0px';
+  panel.style.top = '0px';
+  panel.classList.add('show');
+  var rect = panel.getBoundingClientRect();
+  var localX = x - hostRect.left;
+  var localY = y - hostRect.top;
+  var left = Math.min(Math.max(12, localX), Math.max(12, hostRect.width - rect.width - 12));
+  var top = Math.min(Math.max(12, localY), Math.max(12, hostRect.height - rect.height - 12));
+  panel.style.left = left + 'px';
+  panel.style.top = top + 'px';
+}
+function closeHomeCardMenu() {
+  var menu = document.getElementById('home-card-menu');
+  if (menu) {
+    menu.classList.remove('show');
+    menu.removeAttribute('data-card-id');
+  }
+}
+function closeHomeRestoreMenu() {
+  var pop = document.getElementById('home-restore-pop');
+  if (pop) pop.classList.remove('show');
+}
+function hideHomeCardById(id) {
+  if (!id) return;
+  var state = readHomeCardLayout();
+  if (state.hidden.indexOf(id) < 0) state.hidden.push(id);
+  saveHomeCardLayout();
+  applyHomeCardLayout();
+  closeHomeCardMenu();
+  showToast('模块已删除，可在恢复模块里找回');
+}
+function showHomeCardMenu(card, x, y) {
+  var id = card && card.getAttribute && card.getAttribute('data-home-card');
+  if (!id) return;
+  closeHomeRestoreMenu();
+  var menu = document.getElementById('home-card-menu');
+  if (!menu) return;
+  menu.setAttribute('data-card-id', id);
+  menu.innerHTML = '<button class="danger" type="button" data-home-card-delete="1">删除</button>';
+  placeFloatingPanel(menu, x, y);
+}
+function restoreHomeCard(id) {
+  if (!id) return;
+  var state = readHomeCardLayout();
+  state.hidden = (state.hidden || []).filter(function(item){ return item !== id; });
+  if (state.order.indexOf(id) < 0) state.order.push(id);
+  saveHomeCardLayout();
+  applyHomeCardLayout();
+  showToast('已恢复：' + homeCardLabel(id));
+}
+function restoreHomeCards() {
+  homeCardLayoutState = { order: HOME_CARD_DEFAULT_ORDER.slice(), hidden: [] };
+  saveHomeCardLayout();
+  applyHomeCardLayout();
+  closeHomeRestoreMenu();
+  showToast('Home 模块已恢复');
+}
+function renderHomeRestoreMenu() {
+  var pop = document.getElementById('home-restore-pop');
+  if (!pop) return;
+  var state = readHomeCardLayout();
+  var hidden = (state.hidden || []).filter(function(id){ return HOME_CARD_DEFAULT_ORDER.indexOf(id) >= 0; });
+  var html = '<div class="home-restore-title">可恢复模块</div>';
+  if (hidden.length) {
+    html += hidden.map(function(id){
+      return '<button type="button" data-home-restore-id="' + escHtml(id) + '">' + escHtml(homeCardLabel(id)) + '</button>';
+    }).join('');
+  } else {
+    html += '<div class="home-restore-empty">没有被删除的模块</div>';
+  }
+  html += '<button type="button" data-home-restore-all="1">全部恢复</button>';
+  pop.innerHTML = html;
+}
+function toggleHomeRestoreMenu(e) {
+  if (e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  closeHomeCardMenu();
+  renderHomeRestoreMenu();
+  var pop = document.getElementById('home-restore-pop');
+  var btn = document.getElementById('home-card-restore-btn');
+  if (!pop || !btn) return;
+  if (pop.classList.contains('show')) {
+    closeHomeRestoreMenu();
+    return;
+  }
+  pop.classList.add('show');
+}
+function homeCardRows(grid, dragged) {
+  var cards = Array.prototype.filter.call(grid.querySelectorAll('.home-card[data-home-card]:not(.home-card-hidden)'), function(card){
+    return card !== dragged;
+  }).map(function(card){
+    var rect = card.getBoundingClientRect();
+    return { card: card, rect: rect };
+  }).sort(function(a, b){
+    return Math.abs(a.rect.top - b.rect.top) > 8 ? a.rect.top - b.rect.top : a.rect.left - b.rect.left;
+  });
+  var rows = [];
+  cards.forEach(function(item){
+    var row = rows[rows.length - 1];
+    if (!row || Math.abs(row.top - item.rect.top) > 8) {
+      row = { top: item.rect.top, bottom: item.rect.bottom, cards: [] };
+      rows.push(row);
+    }
+    row.bottom = Math.max(row.bottom, item.rect.bottom);
+    row.cards.push(item);
+  });
+  return rows;
+}
+function homeCardInsertBefore(grid, x, y, dragged) {
+  var rows = homeCardRows(grid, dragged);
+  if (!rows.length) return null;
+  for (var r = 0; r < rows.length; r++) {
+    var row = rows[r];
+    if (y <= row.bottom) {
+      for (var i = 0; i < row.cards.length; i++) {
+        var item = row.cards[i];
+        if (x < item.rect.left + item.rect.width / 2) return item.card;
+      }
+      return rows[r + 1] && rows[r + 1].cards[0] ? rows[r + 1].cards[0].card : null;
+    }
+  }
+  return null;
+}
+function homePlaceholderInsertBefore(grid, x, y, placeholder) {
+  var items = Array.prototype.filter.call(grid.children, function(node){
+    return node !== placeholder && !node.classList.contains('home-card-hidden') && (node.classList.contains('home-card') || node.classList.contains('home-card-placeholder'));
+  }).map(function(node){
+    var rect = node.getBoundingClientRect();
+    return { node: node, rect: rect };
+  }).sort(function(a, b){
+    return Math.abs(a.rect.top - b.rect.top) > 8 ? a.rect.top - b.rect.top : a.rect.left - b.rect.left;
+  });
+  if (!items.length) return null;
+  var rows = [];
+  items.forEach(function(item){
+    var row = rows[rows.length - 1];
+    if (!row || Math.abs(row.top - item.rect.top) > 8) {
+      row = { top: item.rect.top, bottom: item.rect.bottom, items: [] };
+      rows.push(row);
+    }
+    row.bottom = Math.max(row.bottom, item.rect.bottom);
+    row.items.push(item);
+  });
+  for (var r = 0; r < rows.length; r++) {
+    var row = rows[r];
+    if (y <= row.bottom) {
+      for (var i = 0; i < row.items.length; i++) {
+        var item = row.items[i];
+        if (x < item.rect.left + item.rect.width / 2) return item.node;
+      }
+      return rows[r + 1] && rows[r + 1].items[0] ? rows[r + 1].items[0].node : null;
+    }
+  }
+  return null;
+}
+function clearHomeDragTargets(grid) {
+  Array.prototype.forEach.call((grid || document).querySelectorAll('.home-card-drag-target'), function(card){
+    card.classList.remove('home-card-drag-target');
+  });
+}
+function homeVisibleCards(grid) {
+  return Array.prototype.filter.call(grid.querySelectorAll('.home-card[data-home-card]:not(.home-card-hidden)'), function(card){ return !!card; });
+}
+function animateHomeCardFlip(grid, mutator, dragged) {
+  var cards = homeVisibleCards(grid);
+  var first = new Map();
+  cards.forEach(function(card){ first.set(card, card.getBoundingClientRect()); });
+  mutator();
+  var nextCards = homeVisibleCards(grid);
+  nextCards.forEach(function(card){
+    if (card === dragged) return;
+    var from = first.get(card);
+    if (!from) return;
+    var to = card.getBoundingClientRect();
+    var dx = from.left - to.left;
+    var dy = from.top - to.top;
+    if (Math.abs(dx) < .5 && Math.abs(dy) < .5) return;
+    card.style.transition = 'none';
+    card.style.transform = 'translate3d(' + dx + 'px,' + dy + 'px,0)';
+    card.getBoundingClientRect();
+    requestAnimationFrame(function(){
+      card.style.transition = 'transform .28s cubic-bezier(.22,1,.36,1), border-color .22s, background .22s, box-shadow .22s';
+      card.style.transform = '';
+      window.setTimeout(function(){
+        card.style.transition = '';
+      }, 320);
+    });
+  });
+}
+function initHomeCardCustomization() {
+  var grid = document.getElementById('home-card-grid');
+  if (!grid || grid._homeCustomizeBound) return;
+  grid._homeCustomizeBound = true;
+  var dragged = null;
+  var dragMoved = false;
+  var dragStartX = 0;
+  var dragStartY = 0;
+  var dragOffsetX = 0;
+  var dragOffsetY = 0;
+  var dragOriginRect = null;
+  var dragPlaceholder = null;
+  var dragOriginalParent = null;
+  var dragOriginalNext = null;
+  var activePointerId = null;
+  function moveDraggedHomeCard(x, y) {
+    if (!dragged) return;
+    dragged.style.left = (x - dragOffsetX) + 'px';
+    dragged.style.top = (y - dragOffsetY) + 'px';
+  }
+  function finishHomePointerDrag(save) {
+    if (dragged) {
+      dragged.classList.remove('home-card-dragging');
+      dragged.style.transform = '';
+      dragged.style.width = '';
+      dragged.style.height = '';
+      dragged.style.left = '';
+      dragged.style.top = '';
+      dragged.style.position = '';
+      try { dragged.releasePointerCapture(activePointerId); } catch (err) {}
+    }
+    if (dragPlaceholder && dragPlaceholder.parentNode) {
+      if (dragged) {
+        if (save) dragPlaceholder.parentNode.insertBefore(dragged, dragPlaceholder);
+        else if (dragOriginalParent) dragOriginalParent.insertBefore(dragged, dragOriginalNext);
+      }
+      dragPlaceholder.parentNode.removeChild(dragPlaceholder);
+    }
+    clearHomeDragTargets(grid);
+    activePointerId = null;
+    homeCardDragActive = false;
+    if (save && dragMoved) {
+      setHomeCardOrderFromDom();
+      grid._homeDragSuppressClick = true;
+      setTimeout(function(){ grid._homeDragSuppressClick = false; }, 140);
+    }
+    dragged = null;
+    dragMoved = false;
+    dragOriginRect = null;
+    dragPlaceholder = null;
+    dragOriginalParent = null;
+    dragOriginalNext = null;
+  }
+  grid.addEventListener('pointerdown', function(e){
+    if (e.button != null && e.button !== 0) return;
+    var card = e.target && e.target.closest ? e.target.closest('.home-card[data-home-card]') : null;
+    if (!card || card.classList.contains('home-card-hidden')) return;
+    closeHomeCardMenu();
+    closeHomeRestoreMenu();
+    dragged = card;
+    dragMoved = false;
+    dragOriginalParent = card.parentNode;
+    dragOriginalNext = card.nextSibling;
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+    dragOriginRect = card.getBoundingClientRect();
+    dragOffsetX = e.clientX - dragOriginRect.left;
+    dragOffsetY = e.clientY - dragOriginRect.top;
+    activePointerId = e.pointerId;
+    homeCardDragActive = true;
+    try { card.setPointerCapture(activePointerId); } catch (err) {}
+  });
+  window.addEventListener('pointermove', function(e){
+    if (!dragged) return;
+    if (activePointerId != null && e.pointerId !== activePointerId) return;
+    if (!dragMoved && Math.hypot(e.clientX - dragStartX, e.clientY - dragStartY) < 8) return;
+    if (!dragMoved) {
+      dragPlaceholder = document.createElement('div');
+      dragPlaceholder.className = 'home-card-placeholder';
+      dragPlaceholder.style.width = dragOriginRect.width + 'px';
+      dragPlaceholder.style.height = dragOriginRect.height + 'px';
+      dragOriginalParent.insertBefore(dragPlaceholder, dragged.nextSibling);
+      dragged.classList.add('home-card-dragging');
+      dragged.style.width = dragOriginRect.width + 'px';
+      dragged.style.height = dragOriginRect.height + 'px';
+      dragged.style.left = dragOriginRect.left + 'px';
+      dragged.style.top = dragOriginRect.top + 'px';
+      document.body.appendChild(dragged);
+      try { dragged.setPointerCapture(activePointerId); } catch (err) {}
+      dragMoved = true;
+    }
+    e.preventDefault();
+    moveDraggedHomeCard(e.clientX, e.clientY);
+    if (!dragPlaceholder) return;
+    var before = homePlaceholderInsertBefore(grid, e.clientX, e.clientY, dragPlaceholder);
+    if (before !== dragPlaceholder && before !== dragPlaceholder.nextSibling) {
+      animateHomeCardFlip(grid, function(){ grid.insertBefore(dragPlaceholder, before); }, dragged);
+    } else if (!before && dragPlaceholder.nextSibling) {
+      animateHomeCardFlip(grid, function(){ grid.appendChild(dragPlaceholder); }, dragged);
+    }
+  });
+  window.addEventListener('pointerup', function(e){
+    if (!dragged) return;
+    if (dragMoved) e.preventDefault();
+    finishHomePointerDrag(true);
+  });
+  window.addEventListener('pointercancel', function(){
+    finishHomePointerDrag(false);
+  });
+  window.addEventListener('blur', function(){
+    if (dragged) finishHomePointerDrag(false);
+  });
+  grid.addEventListener('click', function(e){
+    if (!grid._homeDragSuppressClick) return;
+    e.preventDefault();
+    e.stopPropagation();
+  }, true);
+  grid.addEventListener('mouseleave', function(){
+    if (dragged && dragMoved) clearHomeDragTargets(grid);
+  });
+  grid.addEventListener('contextmenu', function(e){
+    var card = e.target && e.target.closest ? e.target.closest('.home-card[data-home-card]') : null;
+    if (!card || !grid.contains(card)) return;
+    e.preventDefault();
+    showHomeCardMenu(card, e.clientX, e.clientY);
+  });
+  var menu = document.getElementById('home-card-menu');
+  if (menu && !menu._homeCardMenuBound) {
+    menu._homeCardMenuBound = true;
+    menu.addEventListener('click', function(e){
+      var del = e.target && e.target.closest ? e.target.closest('[data-home-card-delete]') : null;
+      if (!del) return;
+      e.preventDefault();
+      e.stopPropagation();
+      hideHomeCardById(menu.getAttribute('data-card-id'));
+    });
+  }
+  var pop = document.getElementById('home-restore-pop');
+  if (pop && !pop._homeRestoreBound) {
+    pop._homeRestoreBound = true;
+    pop.addEventListener('click', function(e){
+      var restore = e.target && e.target.closest ? e.target.closest('[data-home-restore-id]') : null;
+      var all = e.target && e.target.closest ? e.target.closest('[data-home-restore-all]') : null;
+      if (!restore && !all) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (all) restoreHomeCards();
+      else restoreHomeCard(restore.getAttribute('data-home-restore-id'));
+    });
+  }
+  document.addEventListener('click', function(){
+    closeHomeCardMenu();
+    closeHomeRestoreMenu();
+  });
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape') {
+      closeHomeCardMenu();
+      closeHomeRestoreMenu();
+    }
+  });
+  applyHomeCardLayout();
+}
+var homeNowCoverState = { key: '' };
+function updateHomeNowCover(force) {
+  var art = document.getElementById('home-now-cover-art');
+  var title = document.getElementById('home-now-cover-title');
+  var artist = document.getElementById('home-now-cover-artist');
+  var kicker = document.getElementById('home-now-cover-kicker');
+  if (!art && !title && !artist) return;
+  var song = currentCoverSong();
+  var cover = songCoverSrc(song, 420);
+  var key = song ? ((typeof queueItemKey === 'function' && queueItemKey(song)) || song.localKey || song.id || song.mid || song.name || '') + '|' + cover : '';
+  if (!force && key === homeNowCoverState.key) return;
+  homeNowCoverState.key = key;
+  if (art) {
+    art.style.backgroundImage = cover ? 'url("' + cssImageUrl(cover) + '")' : '';
+    art.classList.toggle('has-cover', !!cover);
+  }
+  if (kicker) kicker.textContent = song ? 'Now Playing' : 'Mineradio';
+  if (title) title.textContent = song ? (song.name || song.title || '正在播放') : '暂无播放';
+  if (artist) artist.textContent = song ? (song.artist || songSourceLabel(song) || '未知歌手') : '播放一首歌后显示专辑封面';
+}
 function compactHomeCount(n) {
   n = Number(n) || 0;
   if (n >= 100000000) return (n / 100000000).toFixed(1).replace(/\.0$/, '') + '亿';
@@ -15655,6 +16151,7 @@ function homeToneForItem(item, index) {
   if (!item) return 'daily';
   if (item.kind === 'weatherSong') return 'daily';
   if (item.kind === 'recent') return 'search';
+  if (item.kind === 'recentEmpty') return 'local';
   if (item.kind === 'profile') return 'local';
   if (item.tone) return item.tone;
   if (item.kind === 'song') return index % 2 ? 'search' : 'daily';
@@ -15684,43 +16181,21 @@ function renderHomeMosaic(items) {
 function renderHomeTiles() {
   var row = document.getElementById('home-tile-row');
   var title = document.getElementById('home-rail-title');
-  var note = document.getElementById('home-rail-note');
   if (!row) return;
-  var tiles = [];
-  var loggedOutHome = !homeDiscoverState.loggedIn && !hasAnyPlatformLogin();
-  var weatherSongs = homeWeatherRadioState.radio && homeWeatherRadioState.radio.songs || [];
-  var summary = homeListenSummary();
-  if (summary.recent && tiles.length < 5) {
-    tiles.push({ kind: 'recent', title: summary.recent.name || '继续听', sub: summary.recent.artist || summary.recent.source || '', cover: summary.recent.cover, record: summary.recent });
+  var history = Array.isArray(listenStatsState.history) ? listenStatsState.history.slice(0, 5) : [];
+  var tiles = history.map(function(record){
+    return {
+      kind: 'recent',
+      title: record.name || '继续听',
+      sub: record.artist || record.source || '最近播放',
+      cover: record.cover,
+      record: record,
+    };
+  });
+  if (!tiles.length) {
+    tiles = [{ kind: 'recentEmpty', title: '暂无最近播放', sub: '播放一首歌后会出现在这里', cover: '' }];
   }
-  if (summary.topArtist && tiles.length < 5) {
-    tiles.push({ kind: 'profile', title: summary.topArtist.name, sub: '常听歌手 · ' + summary.topArtist.plays + ' 次', query: summary.topArtist.name });
-  }
-  if (!loggedOutHome) {
-    homeDiscoverState.songs.slice(0, Math.max(0, 4 - tiles.length)).forEach(function(song, i){
-      tiles.push({ kind: 'song', index: i, song: song, title: song.name || '今日歌曲', sub: song.artist || songSourceLabel(song) });
-    });
-    homeDiscoverState.playlists.slice(0, Math.max(0, 5 - tiles.length)).forEach(function(pl, i){
-      tiles.push({ kind: 'playlist', index: i, title: pl.name || '推荐歌单', sub: (pl.trackCount ? pl.trackCount + ' 首' : 'Playlist') + (pl.playCount ? ' · ' + compactHomeCount(pl.playCount) + ' 播放' : ''), cover: pl.cover });
-    });
-    if (tiles.length < 5) {
-      homeDiscoverState.podcasts.slice(0, 5 - tiles.length).forEach(function(p, i){
-        tiles.push({ kind: 'podcast', index: i, title: p.name || '热门播客', sub: p.djName || p.category || 'Podcast', cover: p.cover });
-      });
-    }
-  }
-  if (tiles.length < 5) {
-    weatherSongs.slice(0, 5 - tiles.length).forEach(function(song, i){
-      tiles.push({ kind: 'weatherSong', index: i, song: song, title: song.name || '天气电台歌曲', sub: song.artist || songSourceLabel(song) });
-    });
-  }
-  if (!tiles.length) tiles = fallbackHomeTiles();
-  tiles = tiles.slice(0, 5);
-  if (title) title.textContent = summary.recent ? '接着听' : (loggedOutHome ? '先从这里开始' : '你的歌单与推荐');
-  if (note) {
-    var liveNote = homeDiscoverState.updatedAt ? '刚刚更新 · 点击即可播放' : '点击即可播放';
-    note.textContent = homeDiscoverState.loading ? '正在整理推荐' : (loggedOutHome && !weatherSongs.length ? '不会自动拉取外部推荐' : (homeDiscoverState.error ? '离线精选' : liveNote));
-  }
+  if (title) title.textContent = '最近播放';
   row.innerHTML = tiles.map(function(item, i){
     var cover = homeTileCover(item);
     var tone = homeToneForItem(item, i);
@@ -15735,6 +16210,7 @@ function renderHomeTiles() {
   renderHomeMosaic(tiles);
 }
 function renderHomeDiscover() {
+  initHomeCardCustomization();
   var sub = document.getElementById('home-subtitle');
   var loggedOutHome = !homeDiscoverState.loggedIn && !hasAnyPlatformLogin();
   var weather = homeWeatherRadioState.weather;
@@ -15743,11 +16219,15 @@ function renderHomeDiscover() {
   var weatherTitle = document.getElementById('home-weather-title');
   var weatherKicker = document.getElementById('home-weather-kicker');
   var weatherMeta = document.getElementById('home-weather-meta');
-  if (weatherTitle) weatherTitle.textContent = '我的音乐库';
-  if (weatherKicker) weatherKicker.textContent = 'Mineradio · Your Library';
+  var mood = weather && weather.mood || radio && { title: radio.title, tagline: radio.subtitle } || null;
+  var weatherLoadingVisible = homeWeatherRadioState.loading && !homeWeatherSilentPrewarmActive;
+  if (weatherTitle) weatherTitle.textContent = mood && mood.title ? mood.title : '今日天气提示';
+  if (weatherKicker) weatherKicker.textContent = weatherLocation ? ('Weather Pulse · ' + weatherLocation) : 'Weather Pulse';
   if (sub) {
-    if (loggedOutHome) sub.textContent = '登录后会把你的歌单、常听歌手和最近播放放在这里；也可以直接搜索或导入本地音乐。';
-    else sub.textContent = '从你的歌单、最近播放和常听歌手开始，天气电台放在需要氛围的时候再开。';
+    if (weatherLoadingVisible) sub.textContent = '正在读取天气，顺便给这个时段找一组合适的歌。';
+    else if (weather && mood && mood.tagline) sub.textContent = mood.tagline + '。天气电台会按当前气温、雨雪、湿度和时间挑歌。';
+    else if (homeWeatherRadioState.error) sub.textContent = '天气服务暂时没接上，先保留本地 Home 和搜索入口。';
+    else sub.textContent = loggedOutHome ? '登录后也会把你的歌单、常听歌手和最近播放放在右侧。' : '天气、电台和你的最近播放会一起汇总在这里。';
   }
   if (weatherMeta) {
     var meta = [];
@@ -15756,12 +16236,15 @@ function renderHomeDiscover() {
       meta.push(weather.label + ' · ' + Math.round(weather.temperature || 0) + '°');
       meta.push('体感 ' + Math.round(weather.apparentTemperature || weather.temperature || 0) + '°');
       if (isFinite(weather.humidity)) meta.push('湿度 ' + Math.round(weather.humidity) + '%');
+      if (isFinite(weather.windSpeed)) meta.push('风速 ' + Math.round(weather.windSpeed) + 'km/h');
     } else {
       meta.push(weatherLocation);
-      meta.push(homeWeatherRadioState.error ? '天气暂不可用' : '正在整理天气');
+      if (homeWeatherRadioState.error) meta.push('天气暂不可用');
+      else if (weatherLoadingVisible) meta.push('正在整理天气');
     }
     weatherMeta.innerHTML = meta.map(function(text){ return '<span class="home-weather-pill">' + escHtml(text) + '</span>'; }).join('');
   }
+  updateHomeNowCover();
   var daily = homeDiscoverState.songs[0] || null;
   var cardSongB = homeDiscoverState.songs[1] || null;
   var cardSongC = homeDiscoverState.songs[2] || null;
@@ -15786,14 +16269,14 @@ function renderHomeDiscover() {
   }
   if (continueTitle) continueTitle.textContent = summary.recent ? summary.recent.name : '继续听';
   if (continueSub) continueSub.textContent = summary.recent ? (summary.recent.artist || summary.recent.source || '最近播放') : '最近播放会出现在这里';
-  if (profileTitle) profileTitle.textContent = summary.topArtist ? summary.topArtist.name : (summary.topSong ? summary.topSong.name : '听歌画像');
-  if (profileSub) profileSub.textContent = summary.topArtist ? ('常听歌手 · ' + summary.topArtist.plays + ' 次') : (summary.totalPlays ? summary.totalPlays + ' 次有效播放' : '播放几首后生成偏好');
+  if (profileTitle) profileTitle.textContent = '听歌画像';
+  if (profileSub) profileSub.textContent = summary.topArtist ? ('常听 ' + summary.topArtist.name + ' · ' + summary.topArtist.plays + ' 次') : (summary.totalPlays ? summary.totalPlays + ' 次有效播放' : '播放几首后生成偏好');
   if (loggedOutHome) {
     if (dailyTitle) dailyTitle.textContent = '每日推荐';
     if (dailySub) dailySub.textContent = '登录后同步你的今日歌曲';
-    if (privateTitle) privateTitle.textContent = '推荐歌曲';
+    if (privateTitle) privateTitle.textContent = '私人电台';
     if (privateSub) privateSub.textContent = '登录后同步更多歌曲';
-    if (libTitle) libTitle.textContent = '更多歌曲';
+    if (libTitle) libTitle.textContent = '常听歌手';
     if (libSub) libSub.textContent = '播放后会继续补全推荐';
     setHomeArt('home-weather-art', '', 280);
     setHomeArt('home-daily-art', '', 280);
@@ -15802,12 +16285,12 @@ function renderHomeDiscover() {
     setHomeArt('home-profile-art', summary.topSong && summary.topSong.cover || summary.recent && summary.recent.cover, 280);
     setHomeArt('home-library-art', '', 280);
   } else {
-    if (dailyTitle) dailyTitle.textContent = daily ? daily.name : '每日推荐';
-    if (dailySub) dailySub.textContent = daily ? ((daily.artist || songSourceLabel(daily) || '今日歌曲') + ' · 点击播放今日队列') : '同步你的今日歌曲';
-    if (privateTitle) privateTitle.textContent = cardSongB ? cardSongB.name : '私人雷达';
-    if (privateSub) privateSub.textContent = cardSongB ? (cardSongB.artist || songSourceLabel(cardSongB) || '推荐歌曲') : (homeDiscoverState.songs.length + ' 首 · 根据今日推荐与常听偏好');
-    if (libTitle) libTitle.textContent = cardSongC ? cardSongC.name : (summary.topArtist ? summary.topArtist.name : '更多歌曲');
-    if (libSub) libSub.textContent = cardSongC ? (cardSongC.artist || songSourceLabel(cardSongC) || '推荐歌曲') : (summary.topArtist ? ('歌手偏好 · ' + summary.topArtist.plays + ' 次') : '播放几首后生成你的偏好');
+    if (dailyTitle) dailyTitle.textContent = '每日推荐';
+    if (dailySub) dailySub.textContent = daily ? ((daily.name || '今日歌曲') + ' · ' + (daily.artist || songSourceLabel(daily) || '点击播放')) : '同步你的今日歌曲';
+    if (privateTitle) privateTitle.textContent = '私人电台';
+    if (privateSub) privateSub.textContent = cardSongB ? ((cardSongB.name || '推荐歌曲') + ' · ' + (cardSongB.artist || songSourceLabel(cardSongB) || '点击播放')) : (homeDiscoverState.songs.length + ' 首 · 根据今日推荐与常听偏好');
+    if (libTitle) libTitle.textContent = '常听歌手';
+    if (libSub) libSub.textContent = cardSongC ? ((cardSongC.name || '推荐歌曲') + ' · ' + (cardSongC.artist || songSourceLabel(cardSongC) || '点击播放')) : (summary.topArtist ? (summary.topArtist.name + ' · ' + summary.topArtist.plays + ' 次') : '播放几首后生成你的偏好');
     setHomeArt('home-weather-art', (userPlaylists[0] && userPlaylists[0].cover) || (playlistItem && playlistItem.cover) || daily && daily.cover, 280);
     setHomeArt('home-daily-art', daily && daily.cover, 280);
     setHomeArt('home-private-art', cardSongB && cardSongB.cover || daily && daily.cover || summary.recent && summary.recent.cover || playlistItem && playlistItem.cover, 280);
@@ -15868,6 +16351,7 @@ async function loadHomeWeatherRadio(force, opts) {
   var token = ++homeWeatherToken;
   homeWeatherRadioState.loading = true;
   homeWeatherRadioState.error = '';
+  homeWeatherSilentPrewarmActive = !!opts.silentPrewarm;
   renderHomeDiscover();
   var loadPromise = (async function(){
     try {
@@ -15890,6 +16374,7 @@ async function loadHomeWeatherRadio(force, opts) {
     } finally {
       if (token === homeWeatherToken) {
         homeWeatherRadioState.loading = false;
+        homeWeatherSilentPrewarmActive = false;
         renderHomeDiscover();
       }
     }
@@ -15902,13 +16387,25 @@ async function loadHomeWeatherRadio(force, opts) {
     if (homeWeatherLoadPromise === loadPromise) homeWeatherLoadPromise = null;
   }
 }
-function scheduleHomeWeatherLoad(delay) {
-  if (homeWeatherLoadTimer) return;
+function scheduleHomeWeatherLoad(delay, opts) {
+  opts = opts || {};
+  var forceLocate = !!opts.forceLocate;
+  if (homeWeatherLoadTimer) {
+    if (!forceLocate) return;
+    clearTimeout(homeWeatherLoadTimer);
+    homeWeatherLoadTimer = null;
+  }
   homeWeatherLoadTimer = setTimeout(function(){
     homeWeatherLoadTimer = null;
     if (!emptyHomeActive) return;
-    loadHomeWeatherRadio(false);
+    if (forceLocate) locateWeatherRadio({ silent: true, startup: true });
+    else loadHomeWeatherRadio(false);
   }, delay || 760);
+}
+function prewarmHomeWeatherRadio() {
+  if (homeWeatherPrewarmStarted) return;
+  homeWeatherPrewarmStarted = true;
+  locateWeatherRadio({ silent: true, startup: true, prewarm: true });
 }
 function weatherRadioContext() {
   var weather = homeWeatherRadioState.weather || {};
@@ -15974,48 +16471,106 @@ if (emptyHomeStartEl) {
     startWeatherRadio();
   }, true);
 }
-function locateWeatherRadio() {
+function locateWeatherRadio(opts) {
+  opts = opts || {};
+  if (opts.startup && homeWeatherStartupLocateDone) return;
+  if (opts.startup) homeWeatherStartupLocateDone = true;
+  var silent = !!opts.silent;
+  var prewarm = !!opts.prewarm;
   var previousWeatherCity = homeWeatherRadioState.city || '上海';
   homeWeatherToken++;
   homeWeatherRadioState.loading = true;
-  homeWeatherRadioState.loaded = false;
   homeWeatherRadioState.error = '';
-  homeWeatherRadioState.weather = null;
-  homeWeatherRadioState.radio = null;
-  homeWeatherRadioState.city = '定位中';
+  homeWeatherSilentPrewarmActive = prewarm;
+  if (!prewarm) {
+    homeWeatherRadioState.loaded = false;
+    homeWeatherRadioState.weather = null;
+    homeWeatherRadioState.radio = null;
+    homeWeatherRadioState.city = '定位中';
+  }
   renderHomeDiscover();
   var locationSettled = false;
   var ipFallbackStarted = false;
+  var geoFallbackTimer = 0;
+  function useBrowserLocation() {
+    if (!navigator.geolocation) return Promise.reject(new Error('GEOLOCATION_UNAVAILABLE'));
+    return new Promise(function(resolve, reject){
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: true,
+        timeout: 8000,
+        maximumAge: 120000
+      });
+    });
+  }
+  function useCoordinates(pos) {
+    if (locationSettled || !pos || !pos.coords) return;
+    if (geoFallbackTimer) {
+      clearTimeout(geoFallbackTimer);
+      geoFallbackTimer = 0;
+    }
+    var lat = Number(pos.coords.latitude);
+    var lon = Number(pos.coords.longitude);
+    if (!isFinite(lat) || !isFinite(lon)) throw new Error('INVALID_GEOLOCATION');
+    locationSettled = true;
+    homeWeatherRadioState.city = '当前位置';
+    renderHomeDiscover();
+    if (!silent) showToast('已用系统定位更新天气');
+    loadHomeWeatherRadio(true, {
+      lat: lat,
+      lon: lon,
+      city: '当前位置',
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || '',
+      silentPrewarm: prewarm,
+    });
+  }
   function useIpFallback() {
     if (locationSettled || ipFallbackStarted) return;
     ipFallbackStarted = true;
+    if (geoFallbackTimer) {
+      clearTimeout(geoFallbackTimer);
+      geoFallbackTimer = 0;
+    }
     apiJson('/api/weather/ip-location?t=' + Date.now()).then(function(data){
       var loc = data && data.location;
       if (!loc || !isFinite(Number(loc.latitude)) || !isFinite(Number(loc.longitude))) throw new Error(data && data.error || 'IP_LOCATION_FAILED');
       if (locationSettled) return;
+      if (geoFallbackTimer) {
+        clearTimeout(geoFallbackTimer);
+        geoFallbackTimer = 0;
+      }
       locationSettled = true;
       homeWeatherRadioState.city = loc.city || '当前位置';
       localStorage.setItem(HOME_WEATHER_CITY_KEY, homeWeatherRadioState.city);
       renderHomeDiscover();
-      showToast('已用网络位置定位到 ' + (loc.city || '当前位置'));
+      if (!silent) showToast('已用网络位置定位到 ' + (loc.city || '当前位置'));
       loadHomeWeatherRadio(true, {
         lat: loc.latitude,
         lon: loc.longitude,
         city: loc.city || '当前位置',
         timezone: loc.timezone || '',
+        silentPrewarm: prewarm,
       });
     }).catch(function(e){
       console.warn('weather ip location failed:', e);
       if (locationSettled) return;
       homeWeatherRadioState.loading = false;
+      homeWeatherSilentPrewarmActive = false;
       homeWeatherRadioState.error = 'LOCATION_FAILED';
       homeWeatherRadioState.city = previousWeatherCity;
       renderHomeDiscover();
-      showToast('定位不可用，可以手动换城市');
+      if (!silent) showToast('定位不可用，可以手动换城市');
     });
   }
-  // Desktop users need a stable city label; browser coordinates can be stale or cityless.
-  useIpFallback();
+  geoFallbackTimer = setTimeout(function(){
+    if (!locationSettled) useIpFallback();
+  }, prewarm ? 1800 : 3600);
+  useBrowserLocation().then(useCoordinates).catch(function(e){
+    console.warn('weather browser geolocation failed:', e);
+    if (!locationSettled) {
+      if (!silent) showToast('系统定位不可用，改用网络位置');
+      useIpFallback();
+    }
+  });
 }
 function changeWeatherCity() {
   var city = window.prompt('输入城市名', homeWeatherRadioState.city || '上海');
@@ -16026,6 +16581,8 @@ function changeWeatherCity() {
   homeWeatherRadioState.loaded = false;
   loadHomeWeatherRadio(true, { city: city });
 }
+function locateHomeWeather() { locateWeatherRadio(); }
+function changeHomeWeatherCity() { changeWeatherCity(); }
 function shouldShowEmptyHomeCore(ignoreSplash) {
   if (!ignoreSplash && document.body.classList.contains('splash-active')) return false;
   if (immersiveMode) return false;
@@ -16150,7 +16707,9 @@ function updateEmptyHomeVisibility(opts) {
   if (show) {
     setPeek(document.getElementById('search-area'), true, 'search');
     renderHomeDiscover();
-    scheduleHomeWeatherLoad(opts.forceLoad ? 1400 : 2400);
+    scheduleHomeWeatherLoad(opts.forceLoad ? 900 : 2400, {
+      forceLocate: !!opts.forceLoad && !homeWeatherStartupLocateDone
+    });
     if (!hasAnyPlatformLogin()) {
       homeDiscoverState.loading = false;
       homeDiscoverState.loaded = true;
@@ -16359,7 +16918,10 @@ function isPointNearHomeContent(x, y) {
   var selectors = [
     '.home-card',
     '.home-tile',
-    '.home-chip'
+    '.home-chip',
+    '.home-card-menu',
+    '.home-restore-pop',
+    '.home-grid-restore'
   ];
   for (var i = 0; i < selectors.length; i++) {
     var nodes = document.querySelectorAll(selectors[i]);
@@ -16493,6 +17055,7 @@ function handleHomeTileClick(index) {
   if (!item) return;
   if (item.kind === 'weatherSong') playWeatherSong(item.index);
   else if (item.kind === 'recent') playHomeRecent(item.record);
+  else if (item.kind === 'recentEmpty') return;
   else if (item.kind === 'profile') openHomeInsight();
   else if (item.kind === 'song') playHomeSong(item.index);
   else if (item.kind === 'login') showLoginModal({ source: 'home-tile' });
@@ -19435,11 +19998,24 @@ function animateVisiblePanelList(listEl, selector, scroller, activeSelector, opt
 function miniQueueSkeleton() {
   return '<div class="mini-queue-skeleton"></div><div class="mini-queue-skeleton"></div><div class="mini-queue-skeleton"></div>';
 }
+function guardPlaylistPanelOpen(ms) {
+  playlistPanelOpenGuardUntil = performance.now() + (ms || 1400);
+  if (peekTimers && peekTimers.pl) {
+    clearTimeout(peekTimers.pl);
+    peekTimers.pl = null;
+  }
+}
 function togglePlaylistPanel(force) {
   var el = document.getElementById('playlist-panel');
   if (force === false) el.classList.remove('show');
-  else if (force === true) el.classList.add('show');
-  else el.classList.toggle('show');
+  else if (force === true) {
+    guardPlaylistPanelOpen(1400);
+    el.classList.add('show');
+  }
+  else {
+    el.classList.toggle('show');
+    if (el.classList.contains('show')) guardPlaylistPanelOpen(1400);
+  }
   if (el.classList.contains('show')) {
     if (window.gsap) window.gsap.fromTo(el, { x: -12, autoAlpha: 0.92 }, { x: 0, autoAlpha: 1, duration: 0.22, ease: 'power2.out', overwrite: true });
     scheduleUiWarmTask(function(){
@@ -19529,6 +20105,7 @@ function openPlaylistPanelTab(tab, preserve) {
   tab = tab === 'podcasts' ? 'podcasts' : (tab === 'playlists' ? 'playlists' : 'queue');
   var panel = document.getElementById('playlist-panel');
   if (panel && panel.dataset && preserve !== false) panel.dataset.preserveTabOnOpen = '1';
+  guardPlaylistPanelOpen(1400);
   switchPlaylistTab(tab);
   setPeek(panel, true, 'pl');
 }
@@ -20248,11 +20825,28 @@ function handleFiles(files) {
   if (!audioFile) updateCustomCoverButton();
 }
 var dropOv = document.getElementById('drop-overlay'), dragCount = 0;
-document.addEventListener('dragenter', function(e){ e.preventDefault(); dragCount++; dropOv.classList.add('show'); });
-document.addEventListener('dragleave', function(e){ e.preventDefault(); dragCount--; if (dragCount<=0){ dragCount=0; dropOv.classList.remove('show'); } });
-document.addEventListener('dragover',  function(e){ e.preventDefault(); });
+function isHomeCardInternalDrag(e) {
+  return !!homeCardDragActive || !!(e && e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], 'application/x-mineradio-home-card') >= 0);
+}
+document.addEventListener('dragenter', function(e){
+  e.preventDefault();
+  if (isHomeCardInternalDrag(e)) { dragCount = 0; dropOv.classList.remove('show'); return; }
+  dragCount++;
+  dropOv.classList.add('show');
+});
+document.addEventListener('dragleave', function(e){
+  e.preventDefault();
+  if (isHomeCardInternalDrag(e)) { dragCount = 0; dropOv.classList.remove('show'); return; }
+  dragCount--;
+  if (dragCount<=0){ dragCount=0; dropOv.classList.remove('show'); }
+});
+document.addEventListener('dragover',  function(e){
+  e.preventDefault();
+  if (isHomeCardInternalDrag(e)) { dragCount = 0; dropOv.classList.remove('show'); }
+});
 document.addEventListener('drop', function(e){
   e.preventDefault(); dragCount = 0; dropOv.classList.remove('show');
+  if (isHomeCardInternalDrag(e)) { homeCardDragActive = false; return; }
   if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
 });
 
@@ -21508,6 +22102,13 @@ function ensureHomeWaveTrackBars() {
 }
 function updateHomeAudioVisual(dt) {
   if (!emptyHomeActive) return;
+  var weatherHero = document.getElementById('home-weather-hero');
+  if (weatherHero) {
+    weatherHero.style.setProperty('--weather-beat', clampRange(beatPulse || 0, 0, 1).toFixed(3));
+    weatherHero.style.setProperty('--weather-bass', clampRange(bass || smoothBass || 0, 0, 1).toFixed(3));
+    weatherHero.style.setProperty('--weather-energy', clampRange(audioEnergy || smoothEnergy || 0, 0, 1).toFixed(3));
+  }
+  updateHomeNowCover();
   var wave = document.getElementById('home-wave-track');
   if (!wave) return;
   var nowMs = performance.now();
@@ -25631,8 +26232,10 @@ function setPeek(el, on, key) {
   if (on && !diyPlayerMode && key === 'fx') return;
   if (!on && key === 'search' && emptyHomeActive && !immersiveMode) return;
   if (!on && key === 'pl' && playlistPanelPinned) return;
+  if (!on && key === 'pl' && performance.now() < playlistPanelOpenGuardUntil) return;
   if (on && key === 'fx') document.body.classList.remove('fullscreen-diy-peek');
   if (on) {
+    if (key === 'pl') guardPlaylistPanelOpen(1400);
     var wasPeek = el.classList.contains('peek');
     if (peekTimers[key]) { clearTimeout(peekTimers[key]); peekTimers[key] = null; }
     if (key === 'fx') el.classList.remove('closing');
@@ -25660,6 +26263,10 @@ function setPeek(el, on, key) {
     if (peekTimers[key]) clearTimeout(peekTimers[key]);
     peekTimers[key] = setTimeout(function(){
       if (key === 'fx' && isFxPanelClickHoldActive()) {
+        peekTimers[key] = null;
+        return;
+      }
+      if (key === 'pl' && performance.now() < playlistPanelOpenGuardUntil) {
         peekTimers[key] = null;
         return;
       }
@@ -26507,6 +27114,7 @@ document.addEventListener('DOMContentLoaded', function(){
   markAppPerf('dom-content-loaded');
   armSplashSoundFallback();
   prewarmHomeWallpaperPreview();
+  prewarmHomeWeatherRadio();
   function requestSplashEnter() {
     playMineradioIntroSound();
     if (splashReadyToEnter) dismissSplash();
