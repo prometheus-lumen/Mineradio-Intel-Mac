@@ -2017,7 +2017,7 @@ html.control-glass-svg-ok #visual-guide-btn:hover{
   </button>
 </div>
 
-<button id="fx-fab" title="视觉控制台">
+<button id="fx-fab" type="button" onclick="openFxPanelFromFab(event)" title="视觉控制台" aria-label="打开视觉控制台">
   <svg width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24"><path d="M4 7h8"/><path d="M16 7h4"/><circle cx="14" cy="7" r="2"/><path d="M4 17h4"/><path d="M12 17h8"/><circle cx="10" cy="17" r="2"/></svg>
 </button>
 <button id="fx-fab-hide-btn" type="button" onclick="toggleFxFabAutoHide(event)" title="自动隐藏视觉控制台">‹</button>
@@ -2732,6 +2732,7 @@ var AUDIO_FADE_OUT_MS = 420;
 var AUDIO_SILENCE_GAIN = 0.0001;
 var userPlaylists = [], qqPlaylists = [], myPodcastCollections = [], myPodcastItems = {}, playlistCoverCache = {};
 var CUSTOM_COVER_STORE_KEY = 'mineradio-custom-covers';
+var CUSTOM_BACKGROUND_MEDIA_STORE_KEY = 'mineradio-custom-background-media-v1';
 var CUSTOM_LYRIC_STORE_KEY = 'mineradio-custom-lyrics-v1';
 var CUSTOM_LYRIC_PREF_STORE_KEY = 'mineradio-custom-lyric-prefs-v1';
 var LYRIC_LAYOUT_STORE_KEY = 'mineradio-lyric-layout-v1';
@@ -2762,6 +2763,7 @@ var hotkeyCaptureState = null;
 var hotkeyGlobalStatus = {};
 var diyPlayerMode = readDiyModePreference();
 var customCoverMap = readCustomCoverMap();
+var customBackgroundMediaMap = readCustomBackgroundMediaMap();
 var customLyricMap = readCustomLyricMap();
 var customLyricPrefs = readCustomLyricPrefs();
 var localBeatMapCache = readLocalBeatMapCache();
@@ -2957,7 +2959,7 @@ function updateFxFabAutoHideFromPointer(x, y) {
   var panelOpen = !!(panel && (panel.classList.contains('peek') || panel.classList.contains('show')));
   var nearBottomRight = x > innerWidth - 126 && y > innerHeight - 158;
   if (!nearBottomRight) fxFabAutoHideRevealArmed = true;
-  document.body.classList.toggle('fx-fab-peek', panelOpen || (nearBottomRight && fxFabAutoHideRevealArmed));
+  document.body.classList.toggle('fx-fab-peek', panelOpen || isFxPanelClickHoldActive() || (nearBottomRight && fxFabAutoHideRevealArmed));
 }
 function layoutFullscreenDiyZone() {
   var width = innerWidth < 820 ? 104 : 128;
@@ -3400,6 +3402,7 @@ var playbackVisualPreset = readSavedPlaybackVisualPreset();
 var startupVisualPreviewActive = false;
 var fx = Object.assign({}, fxDefaults, readSavedLyricLayout());
 normalizeDevelopmentLockedFxState();
+var legacyBackgroundMediaForMigration = normalizeCustomBackgroundMedia(fx.backgroundMedia || fx.backgroundImage);
 var presetTransition = { active:false, start:-10, duration:0.92, from:0, to:0 };
 var controlsAutoHide = readBooleanPreference(CONTROLS_AUTO_HIDE_STORE_KEY, false);
 var controlsHovering = false;
@@ -3409,7 +3412,9 @@ var controlsLastMoveAt = 0;
 var controlsShelfSuppressUntil = 0;
 var cursorHideTimer = null;
 var CURSOR_HIDE_DELAY = 2500;
+var IMMERSIVE_CURSOR_HIDE_DELAY = 5000;
 var fxPanelPinned = false;
+var fxPanelClickHoldUntil = 0;
 var playlistPanelPinned = readBooleanPreference(PLAYLIST_PANEL_PIN_STORE_KEY, false);
 var userCapsuleAutoHide = readBooleanPreference(USER_CAPSULE_AUTO_HIDE_STORE_KEY, false);
 var fxFabAutoHide = readBooleanPreference(FX_FAB_AUTO_HIDE_STORE_KEY, false);
@@ -5477,6 +5482,10 @@ function setCursorHidden(hidden) {
   document.body.classList.toggle('cursor-hidden', !!hidden && isCursorAutoHideMode());
 }
 
+function currentCursorHideDelay() {
+  return immersiveMode ? IMMERSIVE_CURSOR_HIDE_DELAY : CURSOR_HIDE_DELAY;
+}
+
 function scheduleCursorHide(delay) {
   clearCursorAutoHideTimer();
   if (!isCursorAutoHideMode()) {
@@ -5486,7 +5495,7 @@ function scheduleCursorHide(delay) {
   cursorHideTimer = setTimeout(function(){
     cursorHideTimer = null;
     setCursorHidden(true);
-  }, delay == null ? CURSOR_HIDE_DELAY : delay);
+  }, delay == null ? currentCursorHideDelay() : delay);
 }
 
 function revealCursorForActivity() {
@@ -5496,7 +5505,7 @@ function revealCursorForActivity() {
     return;
   }
   setCursorHidden(false);
-  scheduleCursorHide(CURSOR_HIDE_DELAY);
+  scheduleCursorHide();
 }
 
 function syncCursorAutoHideMode() {
@@ -7705,8 +7714,8 @@ function saveLyricLayout() {
       backgroundOpacity: clampRange(fx.backgroundOpacity == null ? fxDefaults.backgroundOpacity : Number(fx.backgroundOpacity), 0, 1),
       controlGlassChromaticOffset: clampRange(fx.controlGlassChromaticOffset == null ? fxDefaults.controlGlassChromaticOffset : Number(fx.controlGlassChromaticOffset), 0, 140),
       backgroundColorCustom: fx.backgroundColorMode === 'custom' || !!fx.backgroundColorCustom,
-      backgroundImage: normalizeCustomBackgroundImage(fx.backgroundImage),
-      backgroundMedia: normalizeCustomBackgroundMedia(fx.backgroundMedia || fx.backgroundImage),
+      backgroundImage: '',
+      backgroundMedia: null,
       desktopLyrics: !!fx.desktopLyrics,
       desktopLyricsSize: clampRange(Number(fx.desktopLyricsSize) || fxDefaults.desktopLyricsSize, 0.72, 1.55),
       desktopLyricsOpacity: clampRange(fx.desktopLyricsOpacity == null ? fxDefaults.desktopLyricsOpacity : Number(fx.desktopLyricsOpacity), 0.28, 1),
@@ -9923,11 +9932,11 @@ function applyCoverCanvas(cv, thumbSrc, opts) {
     setCoverDepthState(opts.deferHeavy ? (uniforms.uHasDepth.value > 0.5 ? 0.22 : 0) : 0, opts.deferHeavy ? 0.20 : 0, opts.deferHeavy ? 120 : 1);
   }
 
-  if (thumbSrc) {
+  if (thumbSrc && !opts.preserveTrackCoverUi) {
     document.getElementById('thumb-cover').src = thumbSrc;
     setControlCoverSrc(thumbSrc);
   }
-  if (shelfManager) shelfManager.onCoverChange(thumbSrc);
+  if (shelfManager && !opts.preserveTrackCoverUi) shelfManager.onCoverChange(thumbSrc);
 
   // 启动颜色渐变 (1.4 秒)
   var colorMixMs = opts.colorMixDuration || (fx.preset === 0 ? 520 : 1400);
@@ -12580,6 +12589,66 @@ function applyCoverDataUrl(dataUrl, opts) {
     applyCoverCanvas(cv, dataUrl, Object.assign({}, opts, { coverSourceKind: 'data', coverSource: dataUrl }));
   };
   img.src = dataUrl;
+}
+
+function activeBackgroundImageForParticles(song) {
+  var media = getCustomBackgroundMediaForSong(song || currentCoverSong());
+  return media && media.type === 'image' && media.src ? media.src : '';
+}
+
+function trackCoverUiSrc(song) {
+  song = song || currentCoverSong();
+  if (!song) return '';
+  var custom = getCustomCoverForSong(song);
+  if (custom) return custom;
+  return song.cover ? coverUrlWithSize(song.cover, 400) : '';
+}
+
+function syncTrackCoverUi(song) {
+  var src = trackCoverUiSrc(song);
+  var thumb = document.getElementById('thumb-cover');
+  if (src) {
+    if (thumb) thumb.src = src;
+    setControlCoverSrc(src);
+  } else {
+    if (thumb) thumb.removeAttribute('src');
+    setControlCoverSrc('');
+  }
+  if (shelfManager) shelfManager.onCoverChange(src);
+}
+
+function loadVisualCoverForSong(song, opts) {
+  opts = opts || {};
+  song = song || currentCoverSong();
+  var bgImage = activeBackgroundImageForParticles(song);
+  if (bgImage) {
+    syncTrackCoverUi(song);
+    applyCoverDataUrl(bgImage, Object.assign({}, opts, {
+      preserveTrackCoverUi: true,
+      coverKey: 'background-image|' + bgImage.slice(0, 180)
+    }));
+    return;
+  }
+  var customCover = getCustomCoverForSong(song);
+  if (customCover) applyCoverDataUrl(customCover, opts);
+  else loadCoverFromUrl(song && song.cover ? coverUrlWithSize(song.cover, 400) : '', opts);
+}
+
+function reloadCurrentVisualCoverForBackground(reason) {
+  var song = currentCoverSong();
+  if (!song && currentIdx < 0) {
+    var bgImage = activeBackgroundImageForParticles(song);
+    if (bgImage) applyCoverDataUrl(bgImage, { coverKey: 'background-image|' + bgImage.slice(0, 180) });
+    else loadCoverFromUrl('');
+    return;
+  }
+  loadVisualCoverForSong(song, {
+    trackToken: trackSwitchToken,
+    deferHeavy: true,
+    delay: 280,
+    timeout: 1200,
+    backgroundMediaRefresh: reason || true
+  });
 }
 
 function commitCustomCoverCanvas(cv, opts) {
@@ -15312,6 +15381,30 @@ function saveCustomCoverMap() {
     return false;
   }
 }
+function readCustomBackgroundMediaMap() {
+  try {
+    var raw = localStorage.getItem(CUSTOM_BACKGROUND_MEDIA_STORE_KEY);
+    var parsed = raw ? JSON.parse(raw) : {};
+    var out = {};
+    if (!parsed || typeof parsed !== 'object') return out;
+    Object.keys(parsed).forEach(function(key){
+      var media = normalizeCustomBackgroundMedia(parsed[key]);
+      if (media) out[key] = media;
+    });
+    return out;
+  } catch (e) {
+    return {};
+  }
+}
+function saveCustomBackgroundMediaMap() {
+  try {
+    localStorage.setItem(CUSTOM_BACKGROUND_MEDIA_STORE_KEY, JSON.stringify(customBackgroundMediaMap || {}));
+    return true;
+  } catch (e) {
+    console.warn('custom background media save failed:', e);
+    return false;
+  }
+}
 function isInlineCoverSrc(src) {
   return typeof src === 'string' && (/^data:image\//i.test(src) || /^blob:/i.test(src));
 }
@@ -15347,6 +15440,37 @@ function getCustomCoverForSong(song) {
   if (song.customCover) return song.customCover;
   var key = songCustomCoverKey(song);
   return key && customCoverMap[key] ? customCoverMap[key] : '';
+}
+function getCustomBackgroundMediaForSong(song) {
+  var key = songCustomCoverKey(song);
+  return key && customBackgroundMediaMap[key] ? normalizeCustomBackgroundMedia(customBackgroundMediaMap[key]) : null;
+}
+function syncCurrentCustomBackgroundMedia(song) {
+  song = song || currentCoverSong();
+  var media = getCustomBackgroundMediaForSong(song);
+  if (!media && song && legacyBackgroundMediaForMigration) {
+    var key = songCustomCoverKey(song);
+    if (key) {
+      customBackgroundMediaMap[key] = legacyBackgroundMediaForMigration;
+      saveCustomBackgroundMediaMap();
+      media = normalizeCustomBackgroundMedia(legacyBackgroundMediaForMigration);
+    }
+    legacyBackgroundMediaForMigration = null;
+  }
+  fx.backgroundMedia = media;
+  fx.backgroundImage = media && media.type === 'image' ? media.src : '';
+  return media;
+}
+function setCustomBackgroundMediaForSong(song, media) {
+  var key = songCustomCoverKey(song);
+  if (!key) return false;
+  media = normalizeCustomBackgroundMedia(media);
+  if (media) customBackgroundMediaMap[key] = media;
+  else delete customBackgroundMediaMap[key];
+  legacyBackgroundMediaForMigration = null;
+  saveCustomBackgroundMediaMap();
+  syncCurrentCustomBackgroundMedia(song);
+  return true;
 }
 function hydrateCustomCover(song) {
   if (!song) return song;
@@ -16680,7 +16804,7 @@ function setCustomCoverForCurrent(dataUrl, opts) {
       if (currentLocalSong && songCustomCoverKey(currentLocalSong) === key) currentLocalSong.customCover = dataUrl;
     }
   }
-  applyCoverDataUrl(dataUrl, opts);
+  loadVisualCoverForSong(song, opts);
   safeRenderQueuePanel('custom-cover-apply', { scrollCurrent: miniQueueOpen });
   safeShelfRebuild('custom-cover-apply');
   updateCustomCoverButton();
@@ -16722,8 +16846,7 @@ function clearCustomCoverForCurrent() {
     }
   }
   if (key && currentLocalSong && songCustomCoverKey(currentLocalSong) === key) delete currentLocalSong.customCover;
-  if (currentIdx >= 0 && playQueue[currentIdx] && playQueue[currentIdx].cover) loadCoverFromUrl(coverUrlWithSize(playQueue[currentIdx].cover, 400));
-  else loadCoverFromUrl('');
+  loadVisualCoverForSong(song, { trackToken: trackSwitchToken, deferHeavy: true, delay: 260, timeout: 1200 });
   safeRenderQueuePanel('custom-cover-clear', { scrollCurrent: miniQueueOpen });
   safeShelfRebuild('custom-cover-clear');
   updateCustomCoverButton();
@@ -18478,6 +18601,7 @@ async function playQueueAt(idx, opts) {
   safePlaybackStep('visual-switch', switchPlaybackVisualToEmily);
   currentLocalSong = null;
   safePlaybackStep('cover-button', updateCustomCoverButton);
+  safePlaybackStep('background-media', updateCustomBackgroundControls);
   safePlaybackStep('like-buttons', function(){ updateLikeButtons(song); });
   safePlaybackStep('like-status', function(){ syncLikeStatusForSong(song); });
   safePlaybackStep('cinema-track-profile', function(){ resetCinemaTrackProfile(song); });
@@ -18498,10 +18622,8 @@ async function playQueueAt(idx, opts) {
 
   markPlayPhase('cover-load');
   safePlaybackStep('cover-load', function(){
-    var customCover = getCustomCoverForSong(song);
     var coverOpts = { trackToken: token, deferHeavy: true, delay: firstVisualPlay ? 380 : 680, timeout: firstVisualPlay ? 1400 : 1900 };
-    if (customCover) applyCoverDataUrl(customCover, coverOpts);
-    else loadCoverFromUrl(song.cover ? coverUrlWithSize(song.cover, 400) : '', coverOpts);
+    loadVisualCoverForSong(song, coverOpts);
   });
   safePlaybackStep('trial-banner-reset', function(){ document.getElementById('trial-banner').classList.remove('show'); });
   safePlaybackStep('show-loading', showLoading);
@@ -20810,24 +20932,23 @@ function resetVisualIconColor() {
 }
 function applyCustomBackground() {
   var color = normalizeHexColor(fx.backgroundColor || '#000000', '#000000');
-  var media = normalizeCustomBackgroundMedia(fx.backgroundMedia || fx.backgroundImage);
-  var image = media && media.type === 'image' ? media.src : '';
+  var media = syncCurrentCustomBackgroundMedia();
   var hasVideo = !!(media && media.type === 'video');
   var opacity = clampRange(fx.backgroundOpacity == null ? 1 : Number(fx.backgroundOpacity), 0, 1);
   var customColor = fx.backgroundColorMode === 'custom' || !!fx.backgroundColorCustom;
-  var override = !!media || customColor || opacity < 1;
+  var override = hasVideo || customColor || opacity < 1;
   var root = document.documentElement;
   var layer = document.getElementById('custom-bg');
   var video = document.getElementById('custom-bg-video');
   root.style.setProperty('--custom-bg-color', color);
   document.body.classList.toggle('custom-background-override', override);
-  document.body.classList.toggle('custom-background-flat', override && !media);
+  document.body.classList.toggle('custom-background-flat', override && !hasVideo);
   document.body.classList.toggle('custom-background-video', hasVideo);
   if (layer) {
-    layer.style.setProperty('--custom-bg-image', image ? 'url("' + cssImageUrl(image) + '")' : 'none');
-    layer.style.setProperty('--custom-bg-image-opacity', image ? opacity.toFixed(3) : '0');
+    layer.style.setProperty('--custom-bg-image', 'none');
+    layer.style.setProperty('--custom-bg-image-opacity', '0');
     layer.style.setProperty('--custom-bg-video-opacity', hasVideo ? opacity.toFixed(3) : '0');
-    layer.style.setProperty('--custom-bg-overlay-opacity', media ? '0.18' : '0');
+    layer.style.setProperty('--custom-bg-overlay-opacity', hasVideo ? '0.18' : '0');
   }
   var token = ++customBgApplyToken;
   if (!video) return;
@@ -20863,6 +20984,7 @@ function applyCustomBackground() {
   }
 }
 function updateCustomBackgroundControls() {
+  syncCurrentCustomBackgroundMedia();
   applyCustomBackground();
   var color = normalizeHexColor(fx.backgroundColor || '#000000', '#000000');
   var picker = document.getElementById('bg-color-picker');
@@ -20908,22 +21030,30 @@ function setCustomBackgroundOpacity(value, silent) {
 }
 function setCustomBackgroundImage(src, silent) {
   var image = normalizeCustomBackgroundImage(src);
-  fx.backgroundImage = image;
-  fx.backgroundMedia = image ? { type: 'image', src: image } : null;
+  var song = currentCoverSong();
+  if (!song || !setCustomBackgroundMediaForSong(song, image ? { type: 'image', src: image } : null)) {
+    if (!silent) showToast('请先播放或选中一首歌曲');
+    return;
+  }
   updateCustomBackgroundControls();
+  reloadCurrentVisualCoverForBackground(image ? 'image' : 'clear');
   saveLyricLayout();
-  if (!silent) showToast(fx.backgroundImage ? '背景图片已应用' : '背景图片已清除');
+  if (!silent) showToast(image ? '已为当前歌曲应用背景粒子图' : '已清除当前歌曲背景图，恢复专辑粒子');
 }
 function clearCustomBackgroundImage() {
   setCustomBackgroundImage('');
 }
 function setCustomBackgroundMedia(media, silent) {
   media = normalizeCustomBackgroundMedia(media);
-  fx.backgroundMedia = media;
-  fx.backgroundImage = media && media.type === 'image' ? media.src : '';
+  var song = currentCoverSong();
+  if (!song || !setCustomBackgroundMediaForSong(song, media)) {
+    if (!silent) showToast('请先播放或选中一首歌曲');
+    return;
+  }
   updateCustomBackgroundControls();
+  reloadCurrentVisualCoverForBackground(media && media.type === 'image' ? 'image' : 'media-clear');
   saveLyricLayout();
-  if (!silent) showToast(media ? (media.type === 'video' ? '背景视频已应用' : '背景图片已应用') : '背景媒体已清除');
+  if (!silent) showToast(media ? (media.type === 'video' ? '已为当前歌曲应用背景视频，粒子使用专辑' : '已为当前歌曲应用背景粒子图') : '已清除当前歌曲背景媒体，恢复专辑粒子');
 }
 function readBackgroundImageFile(file) {
   if (!file || !/^image\//i.test(file.type || '')) {
@@ -22494,6 +22624,32 @@ function toggleFxPanel(force) {
   el.classList.remove('show', 'closing');
   setPeek(el, true, 'fx');
 }
+function holdFxPanelAfterClick(duration) {
+  fxPanelClickHoldUntil = performance.now() + (duration || 760);
+}
+function isFxPanelClickHoldActive() {
+  return performance.now() < fxPanelClickHoldUntil;
+}
+function openFxPanelFromFab(e) {
+  if (e && e.preventDefault) e.preventDefault();
+  if (e && e.stopPropagation) e.stopPropagation();
+  if (e && e.stopImmediatePropagation) e.stopImmediatePropagation();
+  holdFxPanelAfterClick(900);
+  document.body.classList.add('fx-fab-peek');
+  toggleFxPanel(true);
+}
+function bindFxFabButton() {
+  var fab = document.getElementById('fx-fab');
+  if (!fab || fab._mineradioFxFabBound) return;
+  fab._mineradioFxFabBound = true;
+  fab.addEventListener('pointerdown', function(e) {
+    if (e && e.button != null && e.button !== 0) return;
+    holdFxPanelAfterClick(900);
+    document.body.classList.add('fx-fab-peek');
+  }, true);
+  fab.addEventListener('click', openFxPanelFromFab, true);
+}
+bindFxFabButton();
 function resetFx() {
   var savedCam = fx.cam;
   var savedShelf = fx.shelf;
@@ -25500,8 +25656,13 @@ function setPeek(el, on, key) {
       if (fabOn) fabOn.classList.add('active');
     }
   } else {
+    if (key === 'fx' && isFxPanelClickHoldActive()) return;
     if (peekTimers[key]) clearTimeout(peekTimers[key]);
     peekTimers[key] = setTimeout(function(){
+      if (key === 'fx' && isFxPanelClickHoldActive()) {
+        peekTimers[key] = null;
+        return;
+      }
       el.classList.remove('peek');
       if (key === 'fx') {
         var fabOff = document.getElementById('fx-fab');
@@ -25709,7 +25870,7 @@ window.addEventListener('mousemove', function(e){
   var inFxFab = ex >= fabRect.left - 18 && ex <= fabRect.right + 18 && ey >= fabRect.top - 18 && ey <= fabRect.bottom + 18;
   var inFxBridge = fpOn && ex >= Math.min(fpRect.left, fabRect.left) - 18 && ex <= W && ey >= fpRect.bottom - 10 && ey <= fabRect.bottom + 18;
   if (!diyPlayerMode) inFxPanel = inFxFab = inFxBridge = false;
-  if (inFxFab || inFxPanel || inFxBridge) setPeek(fp, true, 'fx');
+  if (inFxFab || inFxPanel || inFxBridge || isFxPanelClickHoldActive()) setPeek(fp, true, 'fx');
   else if (fpOn) setPeek(fp, false, 'fx');
   // 歌单/队列 DOM 面板只在左侧明确停留时出现，避免和右侧 3D 架抢焦点
   var ppOn = pp.classList.contains('peek');
