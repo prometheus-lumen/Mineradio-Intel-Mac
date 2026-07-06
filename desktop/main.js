@@ -772,11 +772,7 @@ function toggleFullscreen(win) {
     exitFullscreenToWindow(win);
     return;
   }
-  if (process.platform === 'darwin' && typeof win.setSimpleFullScreen === 'function') {
-    win.setSimpleFullScreen(true);
-  } else {
-    win.setFullScreen(true);
-  }
+  win.setFullScreen(true);
   setTimeout(() => sendWindowState(win), 80);
 }
 
@@ -1450,6 +1446,7 @@ async function createWindow() {
     show: false,
     frame: false,
     fullscreen: false,
+    fullscreenable: true,
     transparent: true,
     backgroundColor: '#00000000',
     hasShadow: true,
@@ -1488,6 +1485,8 @@ async function createWindow() {
 
   mainWindow.on('maximize', () => sendWindowState(mainWindow));
   mainWindow.on('unmaximize', () => sendWindowState(mainWindow));
+  mainWindow.on('enter-full-screen', () => sendWindowState(mainWindow));
+  mainWindow.on('leave-full-screen', () => sendWindowState(mainWindow));
   mainWindow.on('minimize', () => sendWindowState(mainWindow));
   mainWindow.on('restore', () => sendWindowState(mainWindow));
   mainWindow.on('show', () => sendWindowState(mainWindow));
