@@ -2205,6 +2205,11 @@ html.control-glass-svg-ok #visual-guide-btn:hover{
       <div class="fx-slider"><label>字间距</label><input id="fx-lyricspacing" type="range" min="-0.04" max="0.18" step="0.005"><output></output></div>
       <div class="fx-slider"><label>行距</label><input id="fx-lyriclineheight" type="range" min="0.86" max="1.35" step="0.01"><output></output></div>
       <div class="fx-slider"><label>字重</label><input id="fx-lyricweight" type="range" min="500" max="900" step="50"><output></output></div>
+      <div class="fx-section-label">歌词效果</div>
+      <div class="fx-seg" id="lyric-flow-seg">
+        <button type="button" data-lyric-flow="single">单行</button>
+        <button type="button" data-lyric-flow="cascade">纵向淡出</button>
+      </div>
       <div class="fx-section-label">歌词布局</div>
       <div class="fx-slider"><label>歌词大小</label><input id="fx-lyricscale" type="range" min="0.35" max="1.65" step="0.01"><output></output></div>
       <div class="fx-slider"><label>水平位置</label><input id="fx-lyricx" type="range" min="-2.0" max="2.0" step="0.01"><output></output></div>
@@ -3303,6 +3308,7 @@ var fxDefaults = {
   lyricLetterSpacing: 0,
   lyricLineHeight: 1.0,
   lyricWeight: 900,
+  lyricFlowMode: 'single',
   visualTintMode: 'auto',
   visualTintColor: '#9db8cf',
   uiAccentColor: '#ffffff',
@@ -3386,6 +3392,7 @@ var PACKAGED_DEFAULT_FX_SNAPSHOT = Object.freeze({
   lyricLetterSpacing: 0,
   lyricLineHeight: 1,
   lyricWeight: 900,
+  lyricFlowMode: 'single',
   visualTintMode: 'auto',
   visualTintColor: '#9db8cf',
   uiAccentColor: '#ffffff',
@@ -7341,6 +7348,9 @@ var lyricBaseQuat = new THREE.Quaternion();
 var lyricTiltQuat = new THREE.Quaternion();
 var lyricTargetQuat = new THREE.Quaternion();
 var LYRIC_CAMERA_LOCK_MAX_SCALE = 0.80;
+function isCascadeLyricFlow() {
+  return fx && normalizeLyricFlowMode(fx.lyricFlowMode) === 'cascade';
+}
 function setStageLyricViewBasisFromCameraOrQuaternion(fallbackQuat) {
   if (fallbackQuat) {
     lyricCameraDir.set(0, 0, 1).applyQuaternion(fallbackQuat);
@@ -7605,6 +7615,9 @@ function normalizePerformanceQuality(v) {
   var value = String(v || '');
   return /^(eco|balanced|high|ultra)$/.test(value) ? value : fxDefaults.performanceQuality;
 }
+function normalizeLyricFlowMode(value) {
+  return String(value || '') === 'cascade' ? 'cascade' : 'single';
+}
 function coverParticleGridForResolution(v) {
   var grid = Math.round(118 * normalizeCoverResolution(v));
   grid = Math.max(88, Math.min(183, grid));
@@ -7671,6 +7684,7 @@ function readSavedLyricLayout() {
       lyricLetterSpacing: clampRange(Number(raw.lyricLetterSpacing) || 0, -0.04, 0.18),
       lyricLineHeight: clampRange(Number(raw.lyricLineHeight) || 1, 0.86, 1.35),
       lyricWeight: clampRange(Number(raw.lyricWeight) || 900, 500, 900),
+      lyricFlowMode: normalizeLyricFlowMode(raw.lyricFlowMode || fxDefaults.lyricFlowMode),
       lyricGlow: raw.lyricGlow !== false,
       lyricGlowBeat: raw.lyricGlowBeat !== false,
       lyricGlowParticles: !!raw.lyricGlowParticles,
@@ -7761,6 +7775,7 @@ function saveLyricLayout() {
       lyricLetterSpacing: clampRange(Number(fx.lyricLetterSpacing) || 0, -0.04, 0.18),
       lyricLineHeight: clampRange(Number(fx.lyricLineHeight) || 1, 0.86, 1.35),
       lyricWeight: clampRange(Number(fx.lyricWeight) || 900, 500, 900),
+      lyricFlowMode: normalizeLyricFlowMode(fx.lyricFlowMode),
       lyricGlow: !!fx.lyricGlow,
       lyricGlowBeat: !!fx.lyricGlowBeat,
       lyricGlowParticles: !!fx.lyricGlowParticles,
@@ -8903,6 +8918,7 @@ function buildLyricMesh(text) {
   text = String(text || '').replace(/\s+/g, ' ').trim();
   var mask = makeLyricMask(text);
   var pal = stageLyrics.palette;
+  var cascadeMode = isCascadeLyricFlow();
   var worldW = 6.10;
   var worldH = worldW * (mask.height / mask.width);
   var geo = new THREE.PlaneGeometry(worldW, worldH, 1, 1);
@@ -8916,6 +8932,8 @@ function buildLyricMesh(text) {
   group.userData.state = 'in';
   group.userData.lastLyricProgress = -1;
   group.userData.floatSeed = Math.random() * 100;
+  group.userData.flowMode = cascadeMode ? 'cascade' : 'single';
+  group.userData.cascadeLife = 0;
 
   var sunMat = new THREE.MeshBasicMaterial({
     map:getLyricSunBloomTexture(), transparent:true, opacity:0,
@@ -9040,13 +9058,19 @@ function showStageLine(text, redrawOnly) {
   createLyricsParticles();
   if (!stageLyrics.group) return;
   if (!text) { clearStageLyrics(); return; }
+  var cascadeMode = isCascadeLyricFlow();
   if (redrawOnly && stageLyrics.current) {
     disposeLyricMesh(stageLyrics.current);
     stageLyrics.current = null;
   } else if (stageLyrics.current) {
-    stageLyrics.current.userData.state = 'out';
+    stageLyrics.current.userData.state = cascadeMode ? 'cascade' : 'out';
     stageLyrics.current.userData.age = 0;
+    stageLyrics.current.userData.cascadeLife = 0;
+    stageLyrics.current.userData.flowMode = cascadeMode ? 'cascade' : 'single';
     stageLyrics.outgoing.push(stageLyrics.current);
+  }
+  if (cascadeMode) {
+    while (stageLyrics.outgoing.length > 5) disposeLyricMesh(stageLyrics.outgoing.shift());
   }
   stageLyrics.currentText = text;
   var mesh = buildLyricMesh(text);
@@ -9226,9 +9250,11 @@ function updateStageLyrics3D(dt) {
     stageLyricTargetQuaternion(lyricCoverWorldQuat, layoutTiltX, layoutTiltY);
     stageLyrics.group.quaternion.copy(lyricTargetQuat);
   }
-  function tickMesh(mesh, isCurrent) {
+  function tickMesh(mesh, isCurrent, stackIndex) {
     if (!mesh) return false;
     mesh.userData.age += dt;
+    var cascadeLine = mesh.userData.flowMode === 'cascade';
+    if (cascadeLine) mesh.userData.cascadeLife = (mesh.userData.cascadeLife || 0) + dt * (0.76 + Math.min(0.62, stageLyrics.beatGlow * 0.18 + beatPulse * 0.24));
     var a = Math.min(1, mesh.userData.age / (isCurrent ? 0.52 : 0.38));
     a = a * a * (3 - 2 * a);
     var data = mesh.userData.lyric || {};
@@ -9310,6 +9336,18 @@ function updateStageLyrics3D(dt) {
         }
         mesh.scale.setScalar(mouthMeshScale);
         mesh.rotation.z = Math.sin(t * 0.30 + seed) * 0.010;
+      } else if (cascadeLine) {
+        mesh.userData.skullMouthMeshLocked = false;
+        var cBreath = Math.sin(t * 0.55 + seed) * 0.018 + Math.sin(t * 1.12 + seed) * 0.010;
+        var cBeat = fx.lyricGlowBeat ? stageLyrics.beatGlow : 0;
+        var currentY = 0.46 + cBreath;
+        var currentZ = 1.50 + Math.cos(t * 0.36 + seed) * 0.032;
+        var currentScale = 0.78 + a * 0.045 + bass * 0.020 + cBeat * 0.010;
+        mesh.position.x += (0 - mesh.position.x) * 0.12;
+        mesh.position.y += (currentY - mesh.position.y) * 0.18;
+        mesh.position.z += (currentZ - mesh.position.z) * 0.14;
+        mesh.scale.setScalar(currentScale);
+        mesh.rotation.z = Math.sin(t * 0.25 + seed) * 0.010;
       } else {
         mesh.userData.skullMouthMeshLocked = false;
         mesh.scale.setScalar(0.96 + a * 0.055 + breathe + bass * 0.038 + beatPulse * 0.014);
@@ -9336,6 +9374,31 @@ function updateStageLyrics3D(dt) {
       }
       return true;
     }
+    if (cascadeLine) {
+      stackIndex = Math.max(1, stackIndex || 1);
+      var life = mesh.userData.cascadeLife || mesh.userData.age || 0;
+      var fade = clampRange(1 - life / 6.2, 0, 1);
+      var slotFade = clampRange(1 - (stackIndex - 1) * 0.16, 0.26, 1);
+      var cascadeOpacity = fade * slotFade * shelfDetailLyricProfile.outgoing;
+      var lineY = 0.46 - stackIndex * 0.39 - life * 0.018;
+      var lineZ = 1.50 - stackIndex * 0.045 - life * 0.026;
+      var lineScale = Math.max(0.46, 0.74 - stackIndex * 0.050 - life * 0.010);
+      mesh.position.x += (0 - mesh.position.x) * 0.10;
+      mesh.position.y += (lineY - mesh.position.y) * 0.16;
+      mesh.position.z += (lineZ - mesh.position.z) * 0.13;
+      mesh.scale.setScalar(lineScale);
+      mesh.rotation.z = Math.sin(t * 0.20 + (mesh.userData.floatSeed || 0)) * 0.006;
+      if (data.textMat) data.textMat.uniforms.uOpacity.value = cascadeOpacity;
+      if (data.readabilityMat) data.readabilityMat.opacity = cascadeOpacity * (shelfDetailOpen ? shelfDetailLyricProfile.readability : 0.50);
+      if (data.textMat && data.textMat.uniforms.uSolar) data.textMat.uniforms.uSolar.value *= shelfDetailOpen ? 0.76 : 0.90;
+      if (data.glowMat) data.glowMat.opacity = lyricGlowStrength > 0 ? cascadeOpacity * (0.045 + Math.min(0.12, stageLyrics.beatGlow * 0.025)) * lyricGlowStrength : 0;
+      if (data.sparkMat) {
+        setLyricSparkOpacity(data, lyricGlowStrength > 0 && fx.lyricGlowParticles && !shelfDetailOpen ? cascadeOpacity * 0.10 * lyricGlowStrength : 0);
+        setLyricSparkSize(data, 0.040 + cascadeOpacity * 0.014);
+      }
+      if (data.sunMat) data.sunMat.opacity = lyricGlowStrength > 0 && !shelfDetailOpen ? cascadeOpacity * 0.045 * lyricGlowStrength : 0;
+      return cascadeOpacity > 0.025 && stackIndex <= 5;
+    }
     opacity = (1 - a) * 0.72 * shelfDetailLyricProfile.outgoing;
     if (data.textMat) data.textMat.uniforms.uOpacity.value = opacity;
     if (data.readabilityMat) data.readabilityMat.opacity = opacity * (shelfDetailOpen ? shelfDetailLyricProfile.readability : 0.58);
@@ -9352,9 +9415,10 @@ function updateStageLyrics3D(dt) {
     mesh.scale.setScalar(0.98 - a * 0.06);
     return a < 1;
   }
-  tickMesh(stageLyrics.current, true);
+  tickMesh(stageLyrics.current, true, 0);
   for (var i = stageLyrics.outgoing.length - 1; i >= 0; i--) {
-    if (!tickMesh(stageLyrics.outgoing[i], false)) {
+    var stackIndex = stageLyrics.outgoing.length - i;
+    if (!tickMesh(stageLyrics.outgoing[i], false, stackIndex)) {
       disposeLyricMesh(stageLyrics.outgoing[i]);
       stageLyrics.outgoing.splice(i, 1);
     }
@@ -20948,6 +21012,7 @@ function normalizeFxArchiveSnapshot(raw) {
     lyricLetterSpacing: archiveNumber(raw, 'lyricLetterSpacing', fxDefaults.lyricLetterSpacing, -0.04, 0.18),
     lyricLineHeight: archiveNumber(raw, 'lyricLineHeight', fxDefaults.lyricLineHeight, 0.86, 1.35),
     lyricWeight: archiveNumber(raw, 'lyricWeight', fxDefaults.lyricWeight, 500, 900),
+    lyricFlowMode: normalizeLyricFlowMode(raw.lyricFlowMode || fxDefaults.lyricFlowMode),
     visualTintMode: raw.visualTintMode === 'custom' ? 'custom' : 'auto',
     visualTintColor: normalizeHexColor(raw.visualTintColor || fxDefaults.visualTintColor),
     uiAccentColor: normalizeHexColor(raw.uiAccentColor || fxDefaults.uiAccentColor, fxDefaults.uiAccentColor),
@@ -22186,6 +22251,24 @@ function updateDesktopLyricsFpsControls() {
     btn.classList.toggle('active', normalizeDesktopLyricsFps(btn.getAttribute('data-desktop-lyrics-fps')) === fps);
   });
 }
+function updateLyricFlowControls() {
+  var mode = normalizeLyricFlowMode(fx.lyricFlowMode);
+  document.querySelectorAll('#lyric-flow-seg [data-lyric-flow]').forEach(function(btn){
+    btn.classList.toggle('active', normalizeLyricFlowMode(btn.getAttribute('data-lyric-flow')) === mode);
+  });
+}
+function setLyricFlowMode(mode, silent) {
+  var next = normalizeLyricFlowMode(mode);
+  if (fx.lyricFlowMode === next) {
+    updateLyricFlowControls();
+    return;
+  }
+  fx.lyricFlowMode = next;
+  clearStageLyrics();
+  updateLyricFlowControls();
+  saveLyricLayout();
+  if (!silent) showToast(next === 'cascade' ? '歌词效果: 纵向淡出' : '歌词效果: 单行');
+}
 function updatePerformanceControls() {
   fx.performanceBackground = normalizePerformanceBackgroundMode(fx.performanceBackground, fx.liveBackgroundKeep === true);
   fx.liveBackgroundKeep = fx.performanceBackground === 'keep';
@@ -22286,6 +22369,7 @@ function updateFxInputs() {
   var desktopLyricsHighlightToggle = document.getElementById('t-desktopLyricsHighlight');
   if (desktopLyricsHighlightToggle) desktopLyricsHighlightToggle.classList.toggle('on', fx.desktopLyricsHighlight === true);
   updateDesktopLyricsFpsControls();
+  updateLyricFlowControls();
   var wallpaperModeToggle = document.getElementById('t-wallpaperMode');
   if (wallpaperModeToggle) wallpaperModeToggle.classList.toggle('on', fx.wallpaperMode);
   var shelfPodcastsToggle = document.getElementById('t-shelfShowPodcasts');
@@ -23005,6 +23089,11 @@ function bindFxPanel() {
     lyricGlowPicker.addEventListener('input', function(){ setLyricGlowCustom(lyricGlowPicker.value, true); });
     lyricGlowPicker.addEventListener('change', function(){ showToast('溢光颜色: ' + normalizeHexColor(lyricGlowPicker.value).toUpperCase()); });
   }
+  document.querySelectorAll('#lyric-flow-seg [data-lyric-flow]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      setLyricFlowMode(btn.getAttribute('data-lyric-flow'));
+    });
+  });
   var uiAccentPicker = document.getElementById('ui-accent-picker');
   if (uiAccentPicker) {
     uiAccentPicker.addEventListener('input', function(){ setUiAccentColor(uiAccentPicker.value, true); });
