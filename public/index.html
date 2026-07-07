@@ -1138,9 +1138,9 @@ body.desktop-shell.diy-mode #bottom-bar.stage-mode{left:50%;width:min(1080px,cal
 .preset-card[data-preset="6"] .pc-yui7w{color:#3257f7;font-family:"Microsoft Yi Baiti","SimHei","Microsoft YaHei",sans-serif;font-weight:900;font-style:italic;letter-spacing:.7px}
 .preset-card[data-preset="6"] .pc-icon{color:#3257f7}
 .preset-card[data-preset="6"].active .pc-icon{color:#3257f7!important;text-shadow:0 0 12px rgba(50,87,247,.44)}
-.preset-card[data-preset="7"] .pc-icon{color:#34f5e3}
-.preset-card[data-preset="7"].active{border-color:rgba(52,245,227,.56);box-shadow:0 0 0 1px rgba(52,245,227,.22),0 18px 50px rgba(52,245,227,.075),inset 0 1px 0 rgba(255,255,255,.16)}
-.preset-card[data-preset="7"].active .pc-icon{color:#34f5e3!important;text-shadow:0 0 14px rgba(52,245,227,.58),0 0 28px rgba(255,206,94,.20)}
+.preset-card[data-preset="7"] .pc-icon{color:#ffd987}
+.preset-card[data-preset="7"].active{border-color:rgba(255,217,135,.60);box-shadow:0 0 0 1px rgba(255,217,135,.24),0 18px 52px rgba(255,176,72,.090),inset 0 1px 0 rgba(255,255,255,.18)}
+.preset-card[data-preset="7"].active .pc-icon{color:#ffd987!important;text-shadow:0 0 14px rgba(255,217,135,.62),0 0 28px rgba(73,220,255,.22)}
 .preset-card .pc-bg{position:absolute;inset:0;opacity:.35;pointer-events:none}
 @keyframes preset-card-pulse{0%{opacity:0;transform:scale(.6) rotate(0deg)}35%{opacity:1}100%{opacity:0;transform:scale(1.25) rotate(12deg)}}
 .user-archive-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:0 0 12px}
@@ -3288,7 +3288,7 @@ function maybeAnnounceDjMode() {
 
 // fx 状态: 预设 + 主滑块 + 开关 + 三态
 var fxDefaults = {
-  preset: 0,            // 0=emily cover, 1=tunnel, 2=orbit, 3=void, 4=vinyl, 5=wallpaper, 6=skull, 7=laser
+  preset: 0,            // 0=emily cover, 1=tunnel, 2=orbit, 3=void, 4=vinyl, 5=wallpaper, 6=skull, 7=hexagram
   intensity: 0.85,
   cinemaShake: 0.5,
   depth: 1.0,
@@ -6249,10 +6249,96 @@ void main(){
   }
 
   // ====================================================
-  //  Preset 7: LASER — 歌舞厅镭射
-  //  Disco-ball core with outward laser rays and beat-triggered strobe.
+  //  Preset 7: HEXAGRAM — 六芒星星阵
+  //  Gold/cyan dotted triangles with circular orbital trails.
   // ====================================================
   else if (uPreset > 6.5) {
+    float lane = aUv.y;
+    float seed = hash11(aRand * 1447.0);
+    float beatFlash = smoothstep(0.025, 0.68, uBeat);
+    float bassFlash = smoothstep(0.08, 0.74, uBass);
+    float highSpark = smoothstep(0.035, 0.48, uTreble);
+    float flash = clamp(beatFlash * 0.76 + bassFlash * 0.30 + highSpark * 0.20 + uBurstAmt * 0.58, 0.0, 1.38);
+    vec3 goldA = vec3(1.00, 0.82, 0.42);
+    vec3 goldB = vec3(1.00, 0.94, 0.72);
+    vec3 cyanA = vec3(0.34, 0.88, 1.00);
+    vec3 cyanB = vec3(0.72, 1.00, 1.00);
+
+    if (lane < 0.58) {
+      float starLane = lane / 0.58;
+      float triSet = step(0.5, starLane);
+      float local = triSet < 0.5 ? starLane * 2.0 : (starLane - 0.5) * 2.0;
+      float edgeId = floor(local * 3.0);
+      float edgeT = fract(local * 3.0);
+      float sideBand = floor(aUv.x * 9.0);
+      float sideT = fract(aUv.x * 9.0);
+      float triRot = triSet < 0.5 ? PI * 0.5 : -PI * 0.5;
+      float edgeA = triRot + edgeId * PI * 2.0 / 3.0;
+      float edgeB = triRot + (edgeId + 1.0) * PI * 2.0 / 3.0;
+      float starR = 2.72 + bassFlash * 0.055 + sin(t * 0.42 + seed * 6.0) * 0.010;
+      vec2 va = vec2(cos(edgeA), sin(edgeA)) * starR;
+      vec2 vb = vec2(cos(edgeB), sin(edgeB)) * starR;
+      vec2 base = mix(va, vb, edgeT);
+      vec2 tangent = normalize(vb - va);
+      vec2 normal = vec2(-tangent.y, tangent.x);
+      float strand = (sideT - 0.5) * (0.030 + highSpark * 0.008);
+      float shimmer = sin(edgeT * PI * 42.0 - t * (1.75 + seed * 0.46) + seed * 6.28);
+      pos.xy = base + normal * (strand + shimmer * 0.0045) + tangent * ((seed - 0.5) * 0.012);
+      pos.z = 0.18 + (seed - 0.5) * 0.20 + flash * 0.035;
+      float vertexGlow = max(exp(-pow(edgeT / 0.022, 2.0)), exp(-pow((1.0 - edgeT) / 0.022, 2.0)));
+      float midLineGlow = exp(-pow((edgeT - 0.5) / 0.030, 2.0)) * 0.32;
+      float dotGate = smoothstep(0.05, 0.36, sideT) * (1.0 - smoothstep(0.64, 0.98, sideT));
+      float dotted = 0.68 + pow(max(0.0, shimmer * 0.5 + 0.5), 6.0) * 0.32;
+      vec3 edgeCol = mix(goldA, cyanA, smoothstep(-1.70, 1.70, pos.x + (triSet < 0.5 ? -0.28 : 0.34)));
+      edgeCol = mix(edgeCol, goldB, vertexGlow * 0.54 + flash * 0.08);
+      edgeCol = mix(edgeCol, cyanB, smoothstep(0.82, 1.00, pos.x / starR) * 0.36);
+      vColor = edgeCol * (0.92 + dotted * 0.66 + vertexGlow * (2.10 + flash * 0.70) + midLineGlow);
+      vAlpha = (0.36 + dotted * 0.42 + vertexGlow * 0.54 + midLineGlow * 0.16) * dotGate;
+      maxRippleAmp = max(maxRippleAmp, vertexGlow * (0.60 + flash * 0.46) + dotted * highSpark * 0.10 + midLineGlow * 0.18);
+    } else if (lane < 0.84) {
+      float ringLane = (lane - 0.58) / 0.26;
+      float ringId = floor(ringLane * 8.0);
+      float ringLocal = fract(ringLane * 8.0);
+      float theta = aUv.x * PI * 2.0 + t * (0.050 + ringId * 0.006) * (ringId < 4.0 ? 1.0 : -1.0);
+      float r = 1.28 + ringId * 0.255 + ringLocal * 0.054 + sin(theta * 5.0 + t * 0.45 + seed * 4.0) * 0.008;
+      float broken = smoothstep(0.18, 0.88, hash11(floor(aUv.x * (130.0 + ringId * 19.0)) + ringId * 41.3));
+      float dash = pow(0.5 + 0.5 * sin(theta * (34.0 + ringId * 5.0) - t * (1.7 + ringId * 0.10)), 5.0);
+      pos.xy = vec2(cos(theta), sin(theta)) * r;
+      pos.z = -0.08 + ringId * 0.018 + (seed - 0.5) * 0.16;
+      float cyanMix = smoothstep(0.06, 0.96, sin(theta + ringId * 0.44) * 0.5 + 0.5);
+      vec3 ringCol = mix(goldA, cyanA, cyanMix);
+      ringCol = mix(ringCol, goldB, dash * 0.25 + flash * 0.08);
+      vColor = ringCol * (0.48 + dash * 0.82 + broken * 0.34 + flash * 0.16);
+      vAlpha = (0.09 + dash * 0.32 + broken * 0.14) * (0.72 + highSpark * 0.18);
+      maxRippleAmp = max(maxRippleAmp, dash * highSpark * 0.13 + flash * 0.11);
+    } else if (lane < 0.955) {
+      float q = (lane - 0.84) / 0.115;
+      float theta = aUv.x * PI * 2.0 + sin(q * 6.0 + t * 0.22) * 0.16;
+      float r = mix(3.15, 4.95, q) + snoise(vec3(theta * 0.45, q * 3.0, t * 0.045)) * 0.14;
+      pos.xy = vec2(cos(theta), sin(theta * 0.97 + seed * 0.30)) * r;
+      pos.z = -0.26 - q * 0.34 + (seed - 0.5) * 0.28;
+      float waveDot = pow(0.5 + 0.5 * sin(theta * 42.0 + q * 16.0 - t * 1.25 + seed * 6.28), 4.0);
+      vec3 outerCol = mix(goldA * 0.82, cyanA * 0.72, smoothstep(-0.60, 0.80, cos(theta - 0.40)));
+      vColor = outerCol * (0.34 + waveDot * 0.50 + flash * 0.16);
+      vAlpha = (0.055 + waveDot * 0.16) * (1.0 - smoothstep(0.84, 1.0, q));
+      maxRippleAmp = max(maxRippleAmp, waveDot * 0.07 + flash * 0.08);
+    } else {
+      float q = (lane - 0.955) / 0.045;
+      float dustSeed = hash11(seed * 991.0 + floor(aUv.x * 320.0));
+      float angle = aUv.x * PI * 2.0 + t * (0.018 + dustSeed * 0.030);
+      float r = mix(1.0, 5.3, pow(dustSeed, 0.68));
+      pos = vec3(cos(angle) * r, sin(angle * 0.84 + dustSeed * 5.0) * r * 0.64, mix(-1.2, 0.65, q) + sin(t * 0.26 + dustSeed * 8.0) * 0.10);
+      float twinkle = pow(0.5 + 0.5 * sin(t * (0.62 + dustSeed * 1.2) + aRand * 19.0), 8.0);
+      vAlpha = (0.015 + twinkle * 0.13 + flash * 0.045) * smoothstep(0.03, 0.56, q);
+      vColor = mix(goldA, cyanA, dustSeed) * (0.36 + twinkle * 0.64 + flash * 0.18);
+      maxRippleAmp = max(maxRippleAmp, twinkle * (0.08 + highSpark * 0.15) + flash * 0.08);
+    }
+  }
+
+  // ====================================================
+  //  Legacy laser branch disabled: preset 7 is now HEXAGRAM.
+  // ====================================================
+  else if (uPreset > 99.5) {
     float lane = aUv.y;
     float seed = hash11(aRand * 1201.0);
     float beatFlash = smoothstep(0.020, 0.62, uBeat);
@@ -6475,6 +6561,8 @@ void main(){
 
   vBright = 0.82 + maxRippleAmp * 0.55 + uBass * 0.10 + edgeBoost * 0.30 + uEnergy * 0.05 + uBurstAmt * 0.40;
   if (uPreset > 6.5) {
+    vBright = 1.04 + maxRippleAmp * 0.88 + uBass * 0.05 + uEnergy * 0.06 + uBeat * 0.58 + uBurstAmt * 0.24;
+  } else if (uPreset > 99.5) {
     vBright = 1.02 + maxRippleAmp * 0.92 + uBass * 0.05 + uEnergy * 0.08 + uBeat * 0.72 + uBurstAmt * 0.22;
   } else if (uPreset > 4.5) {
     vBright = 0.94 + maxRippleAmp * 0.34 + uBass * 0.020 + uEnergy * 0.026 + uBurstAmt * 0.025;
@@ -6524,6 +6612,9 @@ void main(){
   float audioBoost = 1.0 + maxRippleAmp * 0.7 + edgeBoost * 0.55 + uBeat * 0.30 + uBurstAmt * 0.5;
   float sz = clamp(depthSize * audioBoost, 1.05, 4.95);
   if (uPreset > 6.5) {
+    float hexDrive = uBeat * 0.62 + uBass * 0.18 + uTreble * 0.26 + uBurstAmt * 0.18;
+    sz = clamp(depthSize * (1.04 + hexDrive * 0.72), 0.92, 4.60);
+  } else if (uPreset > 99.5) {
     float laserDrive = uBeat * 0.80 + uBass * 0.22 + uTreble * 0.34 + uBurstAmt * 0.22;
     sz = clamp(depthSize * (1.45 + laserDrive * 1.35), 1.25, 10.80);
     float laserBallMask = step(0.76, aUv.y) * (1.0 - step(0.98, aUv.y));
@@ -6621,10 +6712,9 @@ scene.add(particles);
 console.log('v7 shell loaded, JS pending');
 
 // ============================================================
-//  镭射预设专用: 连续光束层
-//  粒子点负责闪光球, 这里用真实三角面做从球体向外发射的镭射光.
+//  旧镭射层已停用。保留空壳只为平滑清退旧运行态引用。
 // ============================================================
-var LASER_BEAM_COUNT = 26;
+var LASER_BEAM_COUNT = 0;
 var laserBeamGroup = new THREE.Group();
 var laserBeamOpacity = 0;
 var laserBeamGeometry = new THREE.BufferGeometry();
@@ -6769,7 +6859,7 @@ laserCoreLines.frustumCulled = false;
 laserCoreLines.renderOrder = 4;
 laserCoreLines.visible = false;
 laserBeamGroup.add(laserCoreLines);
-var LASER_SPARKS_PER_BEAM = 68;
+var LASER_SPARKS_PER_BEAM = 0;
 var LASER_SPARK_COUNT = LASER_BEAM_COUNT * LASER_SPARKS_PER_BEAM;
 var laserSparkGeometry = new THREE.BufferGeometry();
 var laserSparkPositions = new Float32Array(LASER_SPARK_COUNT * 3);
@@ -6807,7 +6897,7 @@ var laserSparkParticles = new THREE.Points(laserSparkGeometry, laserSparkMateria
 laserSparkParticles.frustumCulled = false;
 laserSparkParticles.renderOrder = 5;
 laserBeamGroup.add(laserSparkParticles);
-var LASER_BALL_COUNT = 4200;
+var LASER_BALL_COUNT = 0;
 var laserBallGeometry = new THREE.BufferGeometry();
 var laserBallPositions = new Float32Array(LASER_BALL_COUNT * 3);
 var laserBallColors = new Float32Array(LASER_BALL_COUNT * 3);
@@ -6861,7 +6951,7 @@ scene.add(laserBeamGroup);
 
 function updateLaserBeamLayer(dt) {
   if (!laserBeamGroup || !laserBeamMaterial || !laserCoreMaterial || !laserSparkMaterial || !laserBallMaterial) return;
-  var active = fx && fx.preset === 7;
+  var active = false;
   var target = active ? 1 : 0;
   laserBeamOpacity += (target - laserBeamOpacity) * Math.min(1, dt * (active ? 8.5 : 12));
   laserBeamGroup.visible = laserBeamOpacity > 0.012;
@@ -6915,6 +7005,197 @@ function updateLaserBeamLayer(dt) {
   laserBallPoints.rotation.x = Math.sin(tLaser * 0.13) * 0.06;
   var pulseScale = 1 + flash * 0.055;
   laserBeamGroup.scale.set(pulseScale, pulseScale, 1);
+}
+
+// ============================================================
+//  六芒星预设专用: 参考图同款星阵叠加层
+//  主粒子负责点阵密度, 这里补顶点星芒、同心轨迹和外圈波纹。
+// ============================================================
+var HEXAGRAM_PRESET_INDEX = 7;
+var hexagramGroup = new THREE.Group();
+var hexagramOpacity = 0;
+var hexagramGold = new THREE.Color('#ffd987');
+var hexagramGoldHot = new THREE.Color('#fff3c8');
+var hexagramCyan = new THREE.Color('#62e7ff');
+var hexagramCyanHot = new THREE.Color('#d8fbff');
+var hexagramLineGeometry = new THREE.BufferGeometry();
+var hexagramLinePositions = [];
+var hexagramLineColors = [];
+var hexagramLineData = [];
+var hexagramSparkPositions = [];
+var hexagramSparkColors = [];
+var hexagramSparkData = [];
+function pushHexLinePoint(x, y, z, color, phase, drift, pulse) {
+  hexagramLinePositions.push(x, y, z);
+  hexagramLineColors.push(color.r, color.g, color.b);
+  hexagramLineData.push(phase, drift, pulse);
+}
+function pushHexSegment(ax, ay, bx, by, colorA, colorB, phase, drift, pulse) {
+  pushHexLinePoint(ax, ay, 0.18, colorA, phase, drift, pulse);
+  pushHexLinePoint(bx, by, 0.18, colorB, phase + 0.37, drift, pulse);
+}
+function pushHexPolyline(points, colorA, colorB, phase, drift, pulse) {
+  for (var i = 0; i < points.length - 1; i++) {
+    var mixT = i / Math.max(1, points.length - 2);
+    var ca = colorA.clone().lerp(colorB, mixT);
+    var cb = colorA.clone().lerp(colorB, Math.min(1, mixT + 1 / Math.max(1, points.length - 2)));
+    pushHexSegment(points[i].x, points[i].y, points[i + 1].x, points[i + 1].y, ca, cb, phase + i * 0.19, drift, pulse);
+  }
+}
+function pushHexSpark(x, y, z, color, phase, radius, kind) {
+  hexagramSparkPositions.push(x, y, z);
+  hexagramSparkColors.push(color.r, color.g, color.b);
+  hexagramSparkData.push(phase, radius, kind);
+}
+function buildHexagramLayer() {
+  var triR = 2.74;
+  var up = [];
+  var down = [];
+  for (var i = 0; i < 3; i++) {
+    var au = Math.PI * 0.5 + i * Math.PI * 2 / 3;
+    var ad = -Math.PI * 0.5 + i * Math.PI * 2 / 3;
+    up.push({ x: Math.cos(au) * triR, y: Math.sin(au) * triR });
+    down.push({ x: Math.cos(ad) * triR, y: Math.sin(ad) * triR });
+  }
+  for (var e = 0; e < 3; e++) {
+    var u0 = up[e], u1 = up[(e + 1) % 3];
+    var d0 = down[e], d1 = down[(e + 1) % 3];
+    for (var s = 0; s < 34; s++) {
+      var a = s / 34, b = (s + 0.68) / 34;
+      var ugA = hexagramGoldHot.clone().lerp(hexagramCyan, Math.max(0, Math.min(1, (u0.x + (u1.x - u0.x) * a + 2.4) / 4.8)));
+      var ugB = hexagramGoldHot.clone().lerp(hexagramCyanHot, Math.max(0, Math.min(1, (u0.x + (u1.x - u0.x) * b + 2.4) / 4.8)));
+      var dgA = hexagramCyan.clone().lerp(hexagramGoldHot, Math.max(0, Math.min(1, (d0.x + (d1.x - d0.x) * a + 2.3) / 4.6)));
+      var dgB = hexagramCyanHot.clone().lerp(hexagramGold, Math.max(0, Math.min(1, (d0.x + (d1.x - d0.x) * b + 2.3) / 4.6)));
+      pushHexSegment(u0.x + (u1.x - u0.x) * a, u0.y + (u1.y - u0.y) * a, u0.x + (u1.x - u0.x) * b, u0.y + (u1.y - u0.y) * b, ugA, ugB, s * 0.21 + e, 0.006, 1);
+      pushHexSegment(d0.x + (d1.x - d0.x) * a, d0.y + (d1.y - d0.y) * a, d0.x + (d1.x - d0.x) * b, d0.y + (d1.y - d0.y) * b, dgA, dgB, s * 0.17 + e + 3.0, 0.006, 1);
+    }
+  }
+  var hex = [];
+  for (var hi = 0; hi < 6; hi++) {
+    var ha = Math.PI * 0.5 + hi * Math.PI / 3;
+    hex.push({ x: Math.cos(ha) * 1.34, y: Math.sin(ha) * 1.34 });
+  }
+  hex.push(hex[0]);
+  pushHexPolyline(hex, hexagramGoldHot, hexagramCyanHot, 2.0, 0.004, 0.8);
+  for (var spoke = 0; spoke < 6; spoke++) {
+    var sa = Math.PI * 0.5 + spoke * Math.PI / 3;
+    var sc = spoke % 2 ? hexagramCyanHot : hexagramGoldHot;
+    pushHexSegment(Math.cos(sa) * 0.24, Math.sin(sa) * 0.24, Math.cos(sa) * 2.82, Math.sin(sa) * 2.82, sc, sc, spoke * 0.41, 0.002, 0.8);
+  }
+  for (var ri = 0; ri < 17; ri++) {
+    var ringR = 1.18 + ri * 0.185;
+    var segs = ri < 7 ? 104 : 150;
+    for (var rs = 0; rs < segs; rs++) {
+      if ((rs + ri * 3) % (ri < 6 ? 7 : 5) === 0) continue;
+      var t0 = rs / segs * Math.PI * 2;
+      var t1 = (rs + (ri < 7 ? 0.54 : 0.38)) / segs * Math.PI * 2;
+      var wob0 = Math.sin(t0 * 5 + ri) * (ri > 10 ? 0.022 : 0.004);
+      var wob1 = Math.sin(t1 * 5 + ri) * (ri > 10 ? 0.022 : 0.004);
+      var c0 = hexagramGold.clone().lerp(hexagramCyan, 0.5 + 0.5 * Math.sin(t0 + ri * 0.35));
+      var c1 = hexagramGoldHot.clone().lerp(hexagramCyanHot, 0.5 + 0.5 * Math.sin(t1 + ri * 0.35));
+      pushHexSegment(Math.cos(t0) * (ringR + wob0), Math.sin(t0) * (ringR + wob0), Math.cos(t1) * (ringR + wob1), Math.sin(t1) * (ringR + wob1), c0, c1, ri * 0.31 + rs * 0.03, ri < 9 ? 0.0015 : 0.008, ri < 9 ? 0.5 : 0.9);
+    }
+  }
+  var allVertices = up.concat(down);
+  allVertices.forEach(function(v, idx){
+    var hot = idx % 2 ? hexagramCyanHot : hexagramGoldHot;
+    pushHexSpark(v.x, v.y, 0.34, hot, idx * 0.7, 0.28, 1);
+    pushHexSegment(v.x - 0.52, v.y, v.x + 0.52, v.y, hot, hot, idx, 0.0, 1.2);
+    pushHexSegment(v.x, v.y - 0.52, v.x, v.y + 0.52, hot, hot, idx + 0.2, 0.0, 1.2);
+    pushHexSegment(v.x - 0.31, v.y - 0.31, v.x + 0.31, v.y + 0.31, hot, hot, idx + 0.4, 0.0, 1.1);
+    pushHexSegment(v.x - 0.31, v.y + 0.31, v.x + 0.31, v.y - 0.31, hot, hot, idx + 0.6, 0.0, 1.1);
+  });
+  pushHexSpark(0, 0, 0.46, hexagramGoldHot, 5.0, 0.42, 2);
+  pushHexSegment(-0.62, 0, 0.62, 0, hexagramGoldHot, hexagramGoldHot, 5.2, 0, 1.4);
+  pushHexSegment(0, -0.62, 0, 0.62, hexagramGoldHot, hexagramGoldHot, 5.4, 0, 1.4);
+  pushHexSegment(-0.42, -0.42, 0.42, 0.42, hexagramGoldHot, hexagramGoldHot, 5.6, 0, 1.2);
+  pushHexSegment(-0.42, 0.42, 0.42, -0.42, hexagramGoldHot, hexagramGoldHot, 5.8, 0, 1.2);
+  for (var pi = 0; pi < 1500; pi++) {
+    var seed = laserBeamRand(pi * 1.37 + 8.0);
+    var outer = seed > 0.36;
+    var pa = laserBeamRand(pi + 2.1) * Math.PI * 2;
+    var pr = outer ? (3.00 + Math.pow(laserBeamRand(pi + 4.4), 0.55) * 2.55) : (0.28 + Math.pow(laserBeamRand(pi + 6.7), 0.72) * 2.72);
+    var py = Math.sin(pa * (outer ? 0.92 : 1.0) + seed * 2.2) * pr * (outer ? 0.70 : 0.82);
+    var px = Math.cos(pa) * pr;
+    var pc = hexagramGold.clone().lerp(hexagramCyan, laserBeamRand(pi + 12.5));
+    pushHexSpark(px, py, -0.10 + laserBeamRand(pi + 7.2) * 0.30, pc, seed * 6.28, outer ? 0.080 : 0.058, 0);
+  }
+  hexagramLineGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(hexagramLinePositions), 3));
+  hexagramLineGeometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(hexagramLineColors), 3));
+  var sparkGeo = new THREE.BufferGeometry();
+  sparkGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(hexagramSparkPositions), 3));
+  sparkGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(hexagramSparkColors), 3));
+  hexagramGroup.userData.lineBase = new Float32Array(hexagramLinePositions);
+  hexagramGroup.userData.lineData = new Float32Array(hexagramLineData);
+  hexagramGroup.userData.sparkBase = new Float32Array(hexagramSparkPositions);
+  hexagramGroup.userData.sparkData = new Float32Array(hexagramSparkData);
+  var lineMat = new THREE.LineBasicMaterial({ transparent:true, opacity:0, depthWrite:false, depthTest:false, blending:THREE.AdditiveBlending, vertexColors:true });
+  var lines = new THREE.LineSegments(hexagramLineGeometry, lineMat);
+  lines.frustumCulled = false;
+  lines.renderOrder = 7;
+  hexagramGroup.add(lines);
+  var sparkMat = new THREE.PointsMaterial({ map:laserDotTexture, transparent:true, opacity:0, depthWrite:false, depthTest:false, blending:THREE.AdditiveBlending, vertexColors:true, size:0.055, sizeAttenuation:true });
+  var sparks = new THREE.Points(sparkGeo, sparkMat);
+  sparks.frustumCulled = false;
+  sparks.renderOrder = 8;
+  hexagramGroup.add(sparks);
+}
+buildHexagramLayer();
+hexagramGroup.visible = false;
+scene.add(hexagramGroup);
+function updateHexagramLayer(dt) {
+  if (!hexagramGroup || !hexagramGroup.children || hexagramGroup.children.length < 2) return;
+  var active = fx && fx.preset === HEXAGRAM_PRESET_INDEX;
+  var target = active ? 1 : 0;
+  hexagramOpacity += (target - hexagramOpacity) * Math.min(1, dt * (active ? 7.5 : 11));
+  hexagramGroup.visible = hexagramOpacity > 0.012;
+  if (!hexagramGroup.visible) return;
+  var tHex = uniforms.uTime.value;
+  var flash = Math.min(1.45, uniforms.uBeat.value * 1.15 + uniforms.uBass.value * 0.36 + uniforms.uTreble.value * 0.30 + uniforms.uBurstAmt.value * 0.60);
+  var lineObj = hexagramGroup.children[0];
+  var sparkObj = hexagramGroup.children[1];
+  lineObj.material.opacity = hexagramOpacity * (0.34 + flash * 0.13);
+  sparkObj.material.opacity = hexagramOpacity * (0.64 + flash * 0.24);
+  sparkObj.material.size = 0.060 + flash * 0.022;
+  var lineAttr = lineObj.geometry.attributes.position;
+  var lineArr = lineAttr.array;
+  var base = hexagramGroup.userData.lineBase;
+  var data = hexagramGroup.userData.lineData;
+  for (var i = 0; i < lineArr.length / 3; i++) {
+    var lp = i * 3;
+    var dp = i * 3;
+    var phase = data[dp];
+    var drift = data[dp + 1];
+    var pulse = data[dp + 2];
+    var breathe = Math.sin(tHex * (0.62 + pulse * 0.18) + phase) * drift + flash * 0.006 * pulse;
+    var x = base[lp], y = base[lp + 1];
+    var invLen = 1 / Math.max(0.001, Math.sqrt(x * x + y * y));
+    lineArr[lp] = x + x * invLen * breathe;
+    lineArr[lp + 1] = y + y * invLen * breathe;
+    lineArr[lp + 2] = base[lp + 2] + Math.sin(tHex * 0.72 + phase) * 0.010 * pulse + flash * 0.012;
+  }
+  lineAttr.needsUpdate = true;
+  var sparkAttr = sparkObj.geometry.attributes.position;
+  var sparkArr = sparkAttr.array;
+  var sparkBase = hexagramGroup.userData.sparkBase;
+  var sparkData = hexagramGroup.userData.sparkData;
+  for (var si = 0; si < sparkArr.length / 3; si++) {
+    var sp = si * 3;
+    var sd = si * 3;
+    var kind = sparkData[sd + 2];
+    var tw = Math.sin(tHex * (0.72 + kind * 0.42) + sparkData[sd]) * 0.5 + 0.5;
+    var x0 = sparkBase[sp], y0 = sparkBase[sp + 1];
+    var len = Math.max(0.001, Math.sqrt(x0 * x0 + y0 * y0));
+    var driftAmt = (kind > 0.5 ? 0.012 : 0.034) * (0.35 + tw * 0.65) + flash * 0.010;
+    sparkArr[sp] = x0 + x0 / len * driftAmt;
+    sparkArr[sp + 1] = y0 + y0 / len * driftAmt;
+    sparkArr[sp + 2] = sparkBase[sp + 2] + tw * (kind > 0.5 ? 0.036 : 0.12) + flash * 0.020;
+  }
+  sparkAttr.needsUpdate = true;
+  hexagramGroup.rotation.copy(particles.rotation);
+  hexagramGroup.rotation.z += tHex * 0.010;
+  var scale = 1 + flash * 0.018;
+  hexagramGroup.scale.set(scale, scale, 1);
 }
 
 // ============================================================
@@ -21344,7 +21625,7 @@ var presetMeta = [
   { name: '唱片', desc: '唱片 · 圆形封面' },
   { name: '星河', desc: '壁纸粒子 · 音乐律动' },
   { name: '安魂', desc: '骷髅·YUI7W', descHtml: '骷髅·<span class="pc-yui7w">YUI7W</span>' },
-  { name: '镭射', desc: '歌舞厅激光 · 节奏闪烁' },
+  { name: '六芒星', desc: '金青星阵 · 环形轨迹' },
 ];
 var presetIcons = [
   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 14c3-2 5-2 8 0s5 2 8 0M3 10c3-2 5-2 8 0s5 2 8 0M3 18c3-2 5-2 8 0s5 2 8 0"/></svg>',
@@ -21354,7 +21635,7 @@ var presetIcons = [
   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.4"/><path d="M16.5 5.2c2.1.9 3.4 2.4 4 4.5"/><path d="M18.8 3.2l1.5 4.8"/></svg>',
   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 15c2.2-4.4 4.4-4.4 6.6 0s4.4 4.4 6.6 0S20.6 10.6 23 15"/><path d="M3 9c2.2 2.2 4.4 2.2 6.6 0s4.4-2.2 6.6 0S20.6 11.2 23 9"/><circle cx="12" cy="12" r="1.7" fill="currentColor"/></svg>',
   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.2h4v6.2h4.2v3.8H14v7.6h-4v-7.6H5.8V9.4H10z"/></svg>',
-  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12 3.8 4.8"/><path d="M12 12 20.2 4.8"/><path d="M12 12 4.5 18.8"/><path d="M12 12 19.5 18.8"/><circle cx="12" cy="12" r="2.1" fill="currentColor" stroke="none"/></svg>',
+  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.2 19.4 16H4.6L12 3.2Z"/><path d="M12 20.8 4.6 8h14.8L12 20.8Z"/><circle cx="12" cy="12" r="1.45" fill="currentColor" stroke="none"/></svg>',
 ];
 var presetDisplayOrder = [0, 7, 6, 5, 4, 2, 1, 3];
 var lyricColorPresets = [
@@ -22491,14 +22772,14 @@ function refreshPresetGrid() {
 function triggerPresetParticleTransition(fromPreset, toPreset) {
   presetTransition.active = true;
   presetTransition.start = uniforms.uTime.value;
-  presetTransition.duration = toPreset === 5 ? 0.30 : (toPreset === 7 ? 0.36 : 0.24);
+  presetTransition.duration = toPreset === 5 ? 0.30 : (toPreset === HEXAGRAM_PRESET_INDEX ? 0.42 : 0.24);
   presetTransition.from = fromPreset;
   presetTransition.to = toPreset;
   var newVisual = toPreset >= 4;
-  var wallpaperFlow = toPreset === 5 || toPreset === 7;
-  uniforms.uScatter.value = Math.max(uniforms.uScatter.value, fx.scatter + (newVisual ? (wallpaperFlow ? 0.008 : 0.024) : 0.12));
-  uniforms.uBurstAmt.value = Math.max(uniforms.uBurstAmt.value, toPreset === 7 ? 0.24 : (wallpaperFlow ? 0.05 : 0.15));
-  camPunch = Math.max(camPunch, toPreset === 7 ? 0.14 : (wallpaperFlow ? 0.04 : 0.12));
+  var wallpaperFlow = toPreset === 5 || toPreset === HEXAGRAM_PRESET_INDEX;
+  uniforms.uScatter.value = Math.max(uniforms.uScatter.value, fx.scatter + (newVisual ? (toPreset === HEXAGRAM_PRESET_INDEX ? 0.006 : (wallpaperFlow ? 0.008 : 0.024)) : 0.12));
+  uniforms.uBurstAmt.value = Math.max(uniforms.uBurstAmt.value, toPreset === HEXAGRAM_PRESET_INDEX ? 0.20 : (wallpaperFlow ? 0.05 : 0.15));
+  camPunch = Math.max(camPunch, toPreset === HEXAGRAM_PRESET_INDEX ? 0.10 : (wallpaperFlow ? 0.04 : 0.12));
   for (var i = 0; i < 3; i++) {
     triggerRipple((Math.random() - 0.5) * 3.4, (Math.random() - 0.5) * 3.4, 0.58 + Math.random() * 0.32);
   }
@@ -22516,10 +22797,10 @@ function tickPresetTransition() {
   var t = Math.max(0, Math.min(1, raw));
   var wave = Math.sin(t * Math.PI);
   var newVisual = presetTransition.to >= 4;
-  var wallpaperFlow = presetTransition.to === 5 || presetTransition.to === 7;
-  uniforms.uScatter.value = Math.max(uniforms.uScatter.value, fx.scatter + wave * (newVisual ? (presetTransition.to === 7 ? 0.016 : (wallpaperFlow ? 0.008 : 0.026)) : 0.16));
-  uniforms.uBurstAmt.value = Math.max(uniforms.uBurstAmt.value, wave * (presetTransition.to === 7 ? 0.22 : (wallpaperFlow ? 0.045 : (newVisual ? 0.12 : 0.15))));
-  uniforms.uPointScale.value = fx.point * (1 + wave * (presetTransition.to === 7 ? 0.040 : (wallpaperFlow ? 0.016 : 0.048)));
+  var wallpaperFlow = presetTransition.to === 5 || presetTransition.to === HEXAGRAM_PRESET_INDEX;
+  uniforms.uScatter.value = Math.max(uniforms.uScatter.value, fx.scatter + wave * (newVisual ? (presetTransition.to === HEXAGRAM_PRESET_INDEX ? 0.010 : (wallpaperFlow ? 0.008 : 0.026)) : 0.16));
+  uniforms.uBurstAmt.value = Math.max(uniforms.uBurstAmt.value, wave * (presetTransition.to === HEXAGRAM_PRESET_INDEX ? 0.20 : (wallpaperFlow ? 0.045 : (newVisual ? 0.12 : 0.15))));
+  uniforms.uPointScale.value = fx.point * (1 + wave * (presetTransition.to === HEXAGRAM_PRESET_INDEX ? 0.032 : (wallpaperFlow ? 0.016 : 0.048)));
   if (raw >= 1) {
     presetTransition.active = false;
     syncFxUniforms();
@@ -22544,9 +22825,9 @@ function setPreset(p, opts) {
     else if (p === 4) { orbit.userRadius = 6.5; orbit.userPhi = 0.04; orbit.userTheta = 0.0; orbit.baselineRadius = 6.5; orbit.baselinePhi = 0.04; }
     else if (p === 5) { orbit.userRadius = 9.4; orbit.userPhi = 0.34; orbit.userTheta = -0.52; orbit.baselineRadius = 9.4; orbit.baselinePhi = 0.34; }
     else if (p === 6) { orbit.userRadius = 7.4; orbit.userPhi = 0.10; orbit.userTheta = 0.18; orbit.baselineRadius = 7.4; orbit.baselinePhi = 0.10; }
-    else if (p === 7) { orbit.userRadius = 8.7; orbit.userPhi = 0.16; orbit.userTheta = -0.18; orbit.baselineRadius = 8.7; orbit.baselinePhi = 0.16; }
+    else if (p === HEXAGRAM_PRESET_INDEX) { orbit.userRadius = 7.6; orbit.userPhi = 0.08; orbit.userTheta = 0.0; orbit.baselineRadius = 7.6; orbit.baselinePhi = 0.08; }
     else              { orbit.userRadius = 6.6; orbit.userPhi = 0.08; orbit.userTheta = 0.0; orbit.baselineRadius = 6.6; orbit.baselinePhi = 0.08; }
-    orbit.baselineTheta = p === 5 ? -0.52 : (p === 6 ? 0.18 : (p === 7 ? -0.18 : 0.0));
+    orbit.baselineTheta = p === 5 ? -0.52 : (p === 6 ? 0.18 : 0.0);
   }
   if (changed && !opts.silent) showToast('视觉预设: ' + presetMeta[p].name);
   var shouldCommitPlaybackPreset = !!opts.commitPlaybackPreset || !opts.noSave;
@@ -22571,7 +22852,7 @@ function syncFxUniforms() {
   uniforms.uCoverRes.value = normalizeCoverResolution(fx.coverResolution);
   uniforms.uBgFade.value = fx.bgFade;
   uniforms.uBloomStrength.value = fx.bloom ? fx.bloomStrength : 0;
-  if (bloomParticles) bloomParticles.visible = fx.preset !== 7 && fx.bloom && fx.bloomStrength > 0.01;
+  if (bloomParticles) bloomParticles.visible = fx.preset !== HEXAGRAM_PRESET_INDEX && fx.bloom && fx.bloomStrength > 0.01;
   uniforms.uEdgeEnabled.value = fx.edge ? 1 : 0;
   if (uniforms.uTintColor) uniforms.uTintColor.value.set(normalizeHexColor(fx.visualTintColor || '#9db8cf'));
   if (uniforms.uTintStrength) uniforms.uTintStrength.value = fx.visualTintMode === 'custom' ? 0.42 : 0;
@@ -28298,10 +28579,10 @@ function animate() {
   treble = Math.min(0.62, smoothTreb * 1.20) * fx.intensity;
   if (fx.preset >= 4) {
     var wallpaperAudio = fx.preset === 5;
-    var laserAudio = fx.preset === 7;
-    var ringBass = smoothBass * (laserAudio ? 1.36 : (wallpaperAudio ? 1.10 : 1.58)) + beatPulse * (laserAudio ? 0.70 : (wallpaperAudio ? 0.18 : 0.42)) - smoothMid * 0.16 - smoothTreb * 0.06;
-    var ringMid = smoothMid * (laserAudio ? 1.56 : (wallpaperAudio ? 1.16 : 1.82)) - smoothBass * 0.14 - smoothTreb * 0.07;
-    var ringTreble = smoothTreb * (laserAudio ? 2.42 : (wallpaperAudio ? 1.34 : 2.28)) - smoothMid * 0.10 - smoothBass * 0.05;
+    var hexagramAudio = fx.preset === HEXAGRAM_PRESET_INDEX;
+    var ringBass = smoothBass * (hexagramAudio ? 1.24 : (wallpaperAudio ? 1.10 : 1.58)) + beatPulse * (hexagramAudio ? 0.52 : (wallpaperAudio ? 0.18 : 0.42)) - smoothMid * 0.16 - smoothTreb * 0.06;
+    var ringMid = smoothMid * (hexagramAudio ? 1.34 : (wallpaperAudio ? 1.16 : 1.82)) - smoothBass * 0.14 - smoothTreb * 0.07;
+    var ringTreble = smoothTreb * (hexagramAudio ? 1.86 : (wallpaperAudio ? 1.34 : 2.28)) - smoothMid * 0.10 - smoothBass * 0.05;
     bass = Math.pow(clamp01((ringBass - 0.050) / 0.58), 0.72) * fx.intensity;
     mid = Math.pow(clamp01((ringMid - 0.045) / 0.46), 0.78) * fx.intensity;
     treble = Math.pow(clamp01((ringTreble - 0.030) / 0.34), 0.84) * fx.intensity;
@@ -28310,10 +28591,10 @@ function animate() {
       mid = Math.min(mid, 0.40 * fx.intensity);
       treble = Math.min(treble, 0.36 * fx.intensity);
       beatPulse *= 0.34;
-    } else if (laserAudio) {
-      bass = Math.min(1.08, bass * 1.10 + beatPulse * 0.18);
-      mid = Math.min(0.88, mid * 1.06 + beatPulse * 0.05);
-      treble = Math.min(0.90, treble * 1.18 + beatPulse * 0.08);
+    } else if (hexagramAudio) {
+      bass = Math.min(0.92, bass * 1.02 + beatPulse * 0.12);
+      mid = Math.min(0.76, mid * 1.02 + beatPulse * 0.04);
+      treble = Math.min(0.72, treble * 1.08 + beatPulse * 0.06);
     }
   }
   if (djMode.active) {
@@ -28359,9 +28640,9 @@ function animate() {
   // v7.2 旋转 = 头部+眼球追踪 + 鼠标/手势拖动 + 惯性
   tickGestureRotation(dt);
   var skullPresetActive = fx && fx.preset === SKULL_PRESET_INDEX;
-  var laserPresetActive = fx && fx.preset === 7;
+  var hexagramPresetActive = fx && fx.preset === HEXAGRAM_PRESET_INDEX;
   particles.visible = !skullPresetActive;
-  if (bloomParticles) bloomParticles.visible = !skullPresetActive && !laserPresetActive && fx.bloom && fx.bloomStrength > 0.01;
+  if (bloomParticles) bloomParticles.visible = !skullPresetActive && !hexagramPresetActive && fx.bloom && fx.bloomStrength > 0.01;
   if (floatGroup) floatGroup.visible = !skullPresetActive;
   if (backCoverGroup) backCoverGroup.visible = !skullPresetActive;
   var targetRotY = orbit.centerLocked ? 0 : (headParallax.active ? headParallax.x * 0.5 : 0) + gestureRotation.y;
@@ -28379,6 +28660,7 @@ function animate() {
     backCoverGroup.rotation.copy(particles.rotation);
   }
   updateLaserBeamLayer(dt);
+  updateHexagramLayer(dt);
   updateSkullParticleLayer(dt);
   updateStageLyrics3D(dt);
   syncDesktopOverlayState();
