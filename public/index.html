@@ -3783,6 +3783,7 @@ function updateDesktopRuntimeState(state) {
   desktopRuntimeState.fullscreen = !!(state.isFullScreen || state.isNativeFullScreen || state.isHtmlFullScreen || state.isWindowFullScreen);
   updateRenderPowerClasses();
   applyRendererPowerMode();
+  wakeAnimationLoop();
   if (fx && (fx.desktopLyrics || fx.wallpaperMode)) setTimeout(syncDesktopOverlayState, 0);
   if (wasDeep && !isDeepBackgroundMode()) recoverVisualsAfterBackground('desktop-runtime-state');
   if (desktopRuntimeState.fullscreen !== wasFullscreen) scheduleMainRendererViewportRefresh('desktop-runtime-state');
@@ -3792,12 +3793,14 @@ function installRenderPowerHooks() {
   document.addEventListener('visibilitychange', function(){
     updateRenderPowerClasses();
     applyRendererPowerMode();
+    wakeAnimationLoop();
     if (!isDeepBackgroundMode()) recoverVisualsAfterBackground('visibilitychange');
   });
   window.addEventListener('focus', function(){
     desktopRuntimeState.focused = true;
     updateRenderPowerClasses();
     applyRendererPowerMode();
+    wakeAnimationLoop();
     if (!isDeepBackgroundMode()) recoverVisualsAfterBackground('focus');
   });
   window.addEventListener('blur', function(){
@@ -10166,10 +10169,7 @@ function tickLyricsParticles() {
     return;
   }
   var t = audio.currentTime;
-  var newIdx = -1;
-  for (var i = 0; i < lyricsLines.length; i++) {
-    if (lyricsLines[i].t <= t + 0.05) newIdx = i; else break;
-  }
+  var newIdx = findLyricLineIndexAt(lyricsLines, t, stageLyrics.currentIdx);
   if (newIdx < 0) {
     var introText = currentLyricFallbackText();
     if (!introText) {
@@ -21494,8 +21494,20 @@ function endProgressDrag(e) {
 progressBar.addEventListener('pointerup', endProgressDrag);
 progressBar.addEventListener('pointercancel', endProgressDrag);
 progressBar.addEventListener('lostpointercapture', function(){ progressDragState.active = false; progressBar.classList.remove('is-dragging'); });
+var playbackProgressIdleSynced = false;
 setInterval(function(){
-  if (!audio) { updatePlaybackProgressUi(); return; }
+  if (!audio) {
+    if (!playbackProgressIdleSynced) {
+      updatePlaybackProgressUi();
+      playbackProgressIdleSynced = true;
+    }
+    return;
+  }
+  playbackProgressIdleSynced = false;
+  if (!playing || audio.paused) {
+    if (progressDragState.active) updatePlaybackProgressUi();
+    return;
+  }
   updateListenStatsTick(false);
   updatePlaybackProgressUi();
   if (audio.currentTime) updateLyricsHighlight();
@@ -27950,15 +27962,23 @@ function currentDesktopSongMeta() {
 function normalizeDesktopLyricText(text) {
   return String(text || '').replace(/\s+/g, ' ').trim();
 }
+function findLyricLineIndexAt(lines, time, hintIndex) {
+  if (!Array.isArray(lines) || !lines.length) return -1;
+  var target = (Number(time) || 0) + 0.05;
+  var idx = isFinite(hintIndex) ? Math.floor(hintIndex) : -1;
+  if (idx < 0) idx = 0;
+  if (idx >= lines.length) idx = lines.length - 1;
+  while (idx + 1 < lines.length && lines[idx + 1].t <= target) idx++;
+  while (idx >= 0 && lines[idx].t > target) idx--;
+  return idx >= 0 && lines[idx] && lines[idx].t <= target ? idx : -1;
+}
+var desktopLyricLookupState = { idx: -1 };
 function currentDesktopLyricSnapshot() {
   var t = audio && isFinite(audio.currentTime) ? Number(audio.currentTime) : 0;
   var lines = Array.isArray(lyricsLines) ? lyricsLines : [];
   if (playing && audio && lines.length) {
-    var idx = -1;
-    for (var i = 0; i < lines.length; i++) {
-      if (lines[i].t <= t + 0.05) idx = i;
-      else break;
-    }
+    var idx = findLyricLineIndexAt(lines, t, desktopLyricLookupState.idx);
+    desktopLyricLookupState.idx = idx;
     if (idx >= 0) {
       var curLine = lines[idx] || { t:t, text:'' };
       var nextLine = lines[idx + 1];
@@ -28157,6 +28177,23 @@ function applyWallpaperModeState(force) {
 function syncDesktopOverlayState() {
   if (fx.desktopLyrics) pushDesktopLyricsState(false);
   if (fx.wallpaperMode) pushWallpaperState(false);
+}
+var desktopOverlaySyncTick = { at: 0, mode: '' };
+function tickDesktopOverlayState(now) {
+  if (!fx || (!fx.desktopLyrics && !fx.wallpaperMode)) return;
+  now = now || performance.now();
+  var mode = (fx.desktopLyrics ? 'lyrics' : '') + '|' + (fx.wallpaperMode ? 'wallpaper' : '');
+  if (mode !== desktopOverlaySyncTick.mode) {
+    desktopOverlaySyncTick.mode = mode;
+    desktopOverlaySyncTick.at = 0;
+  }
+  var minGap = fx.desktopLyrics
+    ? Math.max(16, desktopLyricsPushInterval())
+    : (fx.wallpaperMode ? 260 : 500);
+  if (isDeepBackgroundMode()) minGap = Math.max(minGap, 1000);
+  if (now - desktopOverlaySyncTick.at < minGap) return;
+  desktopOverlaySyncTick.at = now;
+  syncDesktopOverlayState();
 }
 setInterval(function(){
   if (fx && (fx.desktopLyrics || fx.wallpaperMode)) syncDesktopOverlayState();
@@ -28369,8 +28406,39 @@ var renderPerfState = {
 };
 window.__mineradioPerf = renderPerfState;
 var splashWarmRenderLast = 0;
+var animationLoopTimer = 0;
+var animationFramePending = false;
 function isMainSceneCoveredBySplash() {
   return document.body.classList.contains('splash-active') && !document.body.classList.contains('splash-revealing');
+}
+function scheduleAnimationLoop() {
+  if (animationFramePending || animationLoopTimer) return;
+  if (isDeepBackgroundMode()) {
+    animationLoopTimer = setTimeout(function(){
+      animationLoopTimer = 0;
+      animate();
+    }, 1000);
+    return;
+  }
+  if (typeof requestAnimationFrame === 'function') {
+    animationFramePending = true;
+    requestAnimationFrame(function(){
+      animationFramePending = false;
+      animate();
+    });
+  } else {
+    animationLoopTimer = setTimeout(function(){
+      animationLoopTimer = 0;
+      animate();
+    }, 16);
+  }
+}
+function wakeAnimationLoop() {
+  if (animationLoopTimer) {
+    clearTimeout(animationLoopTimer);
+    animationLoopTimer = 0;
+  }
+  scheduleAnimationLoop();
 }
 function getAdaptiveRenderFps() {
   if (isDeepBackgroundMode()) return 1;
@@ -28411,7 +28479,7 @@ function sampleRenderPerf(now, dt) {
   maybeTrimRuntimeCaches(now);
 }
 function animate() {
-  requestAnimationFrame(animate);
+  scheduleAnimationLoop();
   var now = performance.now();
   if (shouldSkipAdaptiveRenderFrame(now)) return;
   var dt = Math.min((now - prevTime) / 1000, 0.05);
@@ -28663,7 +28731,7 @@ function animate() {
   updateHexagramLayer(dt);
   updateSkullParticleLayer(dt);
   updateStageLyrics3D(dt);
-  syncDesktopOverlayState();
+  tickDesktopOverlayState(now);
 
   // 缩略图脉动
   if (currentIdx >= 0) {
