@@ -1138,6 +1138,9 @@ body.desktop-shell.diy-mode #bottom-bar.stage-mode{left:50%;width:min(1080px,cal
 .preset-card[data-preset="6"] .pc-yui7w{color:#3257f7;font-family:"Microsoft Yi Baiti","SimHei","Microsoft YaHei",sans-serif;font-weight:900;font-style:italic;letter-spacing:.7px}
 .preset-card[data-preset="6"] .pc-icon{color:#3257f7}
 .preset-card[data-preset="6"].active .pc-icon{color:#3257f7!important;text-shadow:0 0 12px rgba(50,87,247,.44)}
+.preset-card[data-preset="7"] .pc-icon{color:#34f5e3}
+.preset-card[data-preset="7"].active{border-color:rgba(52,245,227,.56);box-shadow:0 0 0 1px rgba(52,245,227,.22),0 18px 50px rgba(52,245,227,.075),inset 0 1px 0 rgba(255,255,255,.16)}
+.preset-card[data-preset="7"].active .pc-icon{color:#34f5e3!important;text-shadow:0 0 14px rgba(52,245,227,.58),0 0 28px rgba(255,206,94,.20)}
 .preset-card .pc-bg{position:absolute;inset:0;opacity:.35;pointer-events:none}
 @keyframes preset-card-pulse{0%{opacity:0;transform:scale(.6) rotate(0deg)}35%{opacity:1}100%{opacity:0;transform:scale(1.25) rotate(12deg)}}
 .user-archive-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:0 0 12px}
@@ -2796,7 +2799,8 @@ var CUSTOM_BACKGROUND_MEDIA_STORE_KEY = 'mineradio-custom-background-media-v1';
 var CUSTOM_LYRIC_STORE_KEY = 'mineradio-custom-lyrics-v1';
 var CUSTOM_LYRIC_PREF_STORE_KEY = 'mineradio-custom-lyric-prefs-v1';
 var LYRIC_LAYOUT_STORE_KEY = 'mineradio-lyric-layout-v1';
-var VISUAL_PRESET_SCHEMA = 'skull-preset-v2';
+var VISUAL_PRESET_SCHEMA = 'laser-preset-v1';
+var VISUAL_PRESET_MAX_INDEX = 7;
 var PLAYBACK_QUALITY_STORE_KEY = 'mineradio-playback-quality-v1';
 var UPLOAD_TIP_STORE_KEY = 'mineradio-upload-tip-seen';
 var DIY_MODE_STORE_KEY = 'mineradio-diy-player-mode-v1';
@@ -3284,7 +3288,7 @@ function maybeAnnounceDjMode() {
 
 // fx 状态: 预设 + 主滑块 + 开关 + 三态
 var fxDefaults = {
-  preset: 0,            // 0=emily cover, 1=tunnel, 2=orbit, 3=void, 4=vinyl, 5=wallpaper, 6=skull
+  preset: 0,            // 0=emily cover, 1=tunnel, 2=orbit, 3=void, 4=vinyl, 5=wallpaper, 6=skull, 7=laser
   intensity: 0.85,
   cinemaShake: 0.5,
   depth: 1.0,
@@ -3461,7 +3465,7 @@ function readSavedPlaybackVisualPreset() {
   try {
     var raw = JSON.parse(localStorage.getItem(LYRIC_LAYOUT_STORE_KEY) || '{}') || {};
     if (!Object.prototype.hasOwnProperty.call(raw, 'preset')) return fxDefaults.preset;
-    var savedPreset = clampRange(Number(raw.preset) || 0, 0, 6);
+    var savedPreset = clampRange(Number(raw.preset) || 0, 0, VISUAL_PRESET_MAX_INDEX);
     if (savedPreset === 3 && raw.visualPresetSchema !== VISUAL_PRESET_SCHEMA) savedPreset = 5;
     return savedPreset;
   } catch (e) {
@@ -5792,6 +5796,22 @@ function makeDotTexture() {
   return tex;
 }
 var dotTexture = makeDotTexture();
+function makeLaserDotTexture() {
+  var cv = document.createElement('canvas'); cv.width = cv.height = 64;
+  var ctx = cv.getContext('2d');
+  var g = ctx.createRadialGradient(32, 32, 0, 32, 32, 31);
+  g.addColorStop(0.00, 'rgba(255,255,255,1)');
+  g.addColorStop(0.38, 'rgba(255,255,255,0.96)');
+  g.addColorStop(0.58, 'rgba(255,255,255,0.42)');
+  g.addColorStop(0.78, 'rgba(255,255,255,0.08)');
+  g.addColorStop(1.00, 'rgba(255,255,255,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 64, 64);
+  var tex = new THREE.CanvasTexture(cv);
+  tex.minFilter = THREE.LinearFilter; tex.magFilter = THREE.LinearFilter;
+  return tex;
+}
+var laserDotTexture = makeLaserDotTexture();
 
 // ============================================================
 //  主粒子系统
@@ -6229,6 +6249,93 @@ void main(){
   }
 
   // ====================================================
+  //  Preset 7: LASER — 歌舞厅镭射
+  //  Disco-ball core with outward laser rays and beat-triggered strobe.
+  // ====================================================
+  else if (uPreset > 6.5) {
+    float lane = aUv.y;
+    float seed = hash11(aRand * 1201.0);
+    float beatFlash = smoothstep(0.020, 0.62, uBeat);
+    float bassFlash = smoothstep(0.10, 0.82, uBass);
+    float highSpark = smoothstep(0.045, 0.48, uTreble);
+    float flash = clamp(beatFlash * 0.92 + bassFlash * 0.34 + uBurstAmt * 0.70, 0.0, 1.45);
+
+    if (lane < 0.76) {
+      float beamCount = 18.0;
+      float beamId = floor(aUv.x * beamCount);
+      float beamLocal = fract(aUv.x * beamCount);
+      float beamSeed = hash11(beamId * 17.13 + seed * 7.9);
+      float strandCount = 5.0;
+      float strandId = floor(beamLocal * strandCount);
+      float strandLocal = fract(beamLocal * strandCount);
+      float strandSeed = hash11(beamId * 41.7 + strandId * 9.3 + seed * 3.1);
+      float rayT = clamp(lane / 0.76, 0.0, 1.0);
+      float spread = pow(rayT, 0.88);
+      float angle = beamId / beamCount * PI * 2.0
+        + (strandId - 2.0) * (0.010 + flash * 0.006)
+        + t * (0.034 + beamSeed * 0.050)
+        + sin(t * 0.16 + beamSeed * 6.2831) * 0.075;
+      vec2 dir = vec2(cos(angle), sin(angle));
+      vec2 normal = vec2(-dir.y, dir.x);
+      float cross = (strandLocal - 0.5) * (0.10 + spread * 0.16);
+      float radius = mix(1.32, 18.5 + beamSeed * 4.8, spread);
+      float rayNoise = snoise(vec3(rayT * 1.5, beamSeed * 3.4, t * 0.12));
+      float bend = (sin(rayT * 10.0 - t * (1.4 + beamSeed) + strandSeed * 6.0) * 0.020 + rayNoise * 0.030) * rayT;
+      pos.xy = dir * radius + normal * (cross + bend);
+      pos.z = 0.92 + (beamSeed - 0.5) * (0.72 + rayT * 0.88) + flash * (0.14 - rayT * 0.06);
+
+      float core = exp(-pow((strandLocal - 0.50) / 0.17, 2.0));
+      float shaft = smoothstep(0.0, 0.11, rayT) * (1.0 - smoothstep(0.96, 1.0, rayT));
+      float pulse = pow(0.5 + 0.5 * sin(rayT * 26.0 - t * 4.4 + beamSeed * 6.2), 7.0);
+      float originFlare = 1.0 - smoothstep(0.00, 0.16, rayT);
+      float strobeFloor = 0.34 + beamSeed * 0.34;
+      float strobeRaw = 0.5 + 0.5 * sin(t * (2.6 + beamSeed * 5.2) + beamSeed * 11.0 + strandSeed * 2.4);
+      float strobeGate = pow(max(0.0, (strobeRaw - strobeFloor) / max(0.001, 1.0 - strobeFloor)), 2.8);
+      strobeGate = max(strobeGate, flash * (0.18 + beamSeed * 0.42));
+      vec3 cA = mix(vec3(0.00, 1.00, 0.92), vec3(1.00, 0.10, 0.70), step(0.32, beamSeed));
+      vec3 cB = mix(vec3(0.38, 0.70, 1.0), vec3(1.0, 0.82, 0.12), step(0.66, beamSeed));
+      vec3 laserCol = mix(cA, cB, pulse * 0.58 + highSpark * 0.24);
+      vColor = laserCol * (0.80 + strobeGate * (1.15 + core * 1.85 + flash * 1.65 + originFlare * 1.15 + highSpark * 0.72));
+      vAlpha = (0.006 + core * 0.13 + originFlare * 0.035 + pulse * 0.035) * shaft * strobeGate * (0.26 + flash * 0.34);
+      maxRippleAmp = max(maxRippleAmp, core * (0.34 + flash * 0.60) + originFlare * 0.18 + pulse * highSpark * 0.20);
+    } else if (lane < 0.98) {
+      float q = (lane - 0.76) / 0.22;
+      float band = floor(aUv.x * 46.0);
+      float row = floor(q * 22.0);
+      float tile = fract(aUv.x * 46.0);
+      float tileSeed = hash11(band * 29.7 + seed * 11.3);
+      float theta = aUv.x * PI * 2.0 + t * (0.16 + bassFlash * 0.10);
+      float phi = (q - 0.5) * PI * 0.86;
+      float ballR = 1.18 + bassFlash * 0.08 + sin(t * 0.54 + tileSeed * 6.0) * 0.012;
+      float mosaic = step(0.46, hash11(row * 19.3 + band * 3.1));
+      float facet = pow(0.5 + 0.5 * sin(tile * PI * 2.0 + tileSeed * 5.0), 3.8);
+      pos.x = cos(theta) * cos(phi) * ballR;
+      pos.y = sin(phi) * ballR;
+      pos.z = sin(theta) * cos(phi) * ballR + 1.04;
+      float silhouette = pow(abs(cos(phi)), 0.70);
+      float equatorShade = 1.0 - smoothstep(0.10, 0.46, abs(q - 0.5));
+      float flare = pow(max(0.0, cos(theta - t * 0.26)), 13.0) * (0.40 + flash * 0.52);
+      float cutLine = smoothstep(0.88, 0.99, fract(row * 0.37 + band * 0.19 + tileSeed));
+      vec3 baseMirror = mix(vec3(0.42, 0.50, 0.56), vec3(0.96, 0.98, 0.94), mosaic);
+      vec3 coolFacet = mix(baseMirror, vec3(0.70, 0.92, 1.0), facet * 0.34);
+      vColor = coolFacet * (0.62 + silhouette * 0.62 + equatorShade * 0.18 + facet * 0.42 + flare * 1.45 + cutLine * 0.28 + highSpark * 0.18);
+      vAlpha = (0.06 + mosaic * 0.03 + facet * 0.055 + flare * 0.04 + cutLine * 0.025) * (0.34 + flash * 0.08);
+      maxRippleAmp = max(maxRippleAmp, 0.02 + flash * 0.035 + flare * 0.035);
+    } else {
+      float q = (lane - 0.98) / 0.02;
+      float dustSeed = hash11(seed * 991.0 + floor(aUv.x * 260.0));
+      float drift = fract(aUv.x + t * (0.006 + dustSeed * 0.018) + dustSeed * 0.73);
+      float angle = drift * PI * 2.0 + t * (0.10 + dustSeed * 0.14);
+      float r = mix(2.0, 12.8, pow(dustSeed, 0.62));
+      pos = vec3(cos(angle) * r, sin(angle * 0.84 + dustSeed * 5.0) * r * 0.56, mix(-16.0, 4.0, q) + sin(t * 0.30 + dustSeed * 9.0));
+      float twinkle = pow(0.5 + 0.5 * sin(t * (0.72 + dustSeed * 1.4) + aRand * 20.0), 7.0);
+      vAlpha = (0.012 + twinkle * 0.12 + flash * 0.045) * smoothstep(0.02, 0.42, q);
+      vColor = mix(vec3(0.58, 0.92, 1.0), vec3(1.0, 0.74, 0.48), dustSeed) * (0.38 + twinkle * 0.54 + flash * 0.22);
+      maxRippleAmp = max(maxRippleAmp, twinkle * (0.08 + highSpark * 0.18) + flash * 0.10);
+    }
+  }
+
+  // ====================================================
   //  Preset 5: WALLPAPER PULSE
   //  Layered music-particle wallpaper: aurora ribbons, depth sparks,
   //  and cover-colored audio flow.
@@ -6367,7 +6474,9 @@ void main(){
   vColor = mix(vColor, tintedColor, clamp(uTintStrength, 0.0, 1.0) * (1.0 - blackParticleGuard));
 
   vBright = 0.82 + maxRippleAmp * 0.55 + uBass * 0.10 + edgeBoost * 0.30 + uEnergy * 0.05 + uBurstAmt * 0.40;
-  if (uPreset > 4.5) {
+  if (uPreset > 6.5) {
+    vBright = 1.02 + maxRippleAmp * 0.92 + uBass * 0.05 + uEnergy * 0.08 + uBeat * 0.72 + uBurstAmt * 0.22;
+  } else if (uPreset > 4.5) {
     vBright = 0.94 + maxRippleAmp * 0.34 + uBass * 0.020 + uEnergy * 0.026 + uBurstAmt * 0.025;
   } else if (uPreset > 3.5) {
     vBright = 0.94 + maxRippleAmp * 0.64 + uBass * 0.08 + edgeBoost * 0.12 + uEnergy * 0.05 + uBeat * 0.16 + uBurstAmt * 0.16;
@@ -6414,7 +6523,16 @@ void main(){
   float depthSize = 36.0 / max(0.5, -mvPos.z);
   float audioBoost = 1.0 + maxRippleAmp * 0.7 + edgeBoost * 0.55 + uBeat * 0.30 + uBurstAmt * 0.5;
   float sz = clamp(depthSize * audioBoost, 1.05, 4.95);
-  if (uPreset > 4.5) {
+  if (uPreset > 6.5) {
+    float laserDrive = uBeat * 0.80 + uBass * 0.22 + uTreble * 0.34 + uBurstAmt * 0.22;
+    sz = clamp(depthSize * (1.45 + laserDrive * 1.35), 1.25, 10.80);
+    float laserBallMask = step(0.76, aUv.y) * (1.0 - step(0.98, aUv.y));
+    float laserRayMask = 1.0 - step(0.76, aUv.y);
+    float laserBallSize = clamp(depthSize * (0.72 + laserDrive * 0.18), 0.72, 2.85);
+    float laserRaySize = clamp(depthSize * (0.84 + laserDrive * 0.30), 0.82, 3.65);
+    sz = mix(sz, laserRaySize, laserRayMask);
+    sz = mix(sz, laserBallSize, laserBallMask);
+  } else if (uPreset > 4.5) {
     float flowDrive = uBass * 0.070 + uMid * 0.046 + uTreble * 0.060 + uBurstAmt * 0.090 + uBeat * 0.055;
     sz = clamp(depthSize * (1.05 + flowDrive), 1.00, 5.45);
   } else if (uPreset > 3.5) {
@@ -6438,13 +6556,17 @@ varying float vBright, vRipple, vEdgeBoost, vAlpha, vSourceLum;
 
 void main(){
   vec4 tex = texture2D(uDotTex, gl_PointCoord);
+  float dotDist = length(gl_PointCoord - vec2(0.5)) * 2.0;
+  if (uPreset > 6.5) {
+    float crispDot = smoothstep(1.02, 0.42, dotDist);
+    tex.a = min(tex.a, crispDot) * (0.78 + crispDot * 0.22);
+  }
   if (tex.a < 0.02) discard;
   vec3 col = vColor * vBright;
   col = mix(col, col * 1.3 + vec3(0.05), vEdgeBoost * 0.35);
   col = mix(col, col * 1.2, vRipple * 0.4);
   float keepBlack = 1.0 - smoothstep(0.025, 0.115, vSourceLum);
   float nonBlack = 1.0 - keepBlack;
-  float dotDist = length(gl_PointCoord - vec2(0.5)) * 2.0;
   float readableRim = smoothstep(0.44, 0.94, dotDist) * (1.0 - smoothstep(0.94, 1.08, dotDist)) * tex.a;
   float outLum = dot(col, vec3(0.299, 0.587, 0.114));
   float lightParticle = smoothstep(0.50, 0.82, outLum) * nonBlack;
@@ -6497,6 +6619,303 @@ particles.frustumCulled = false;
 particles.renderOrder = 1;
 scene.add(particles);
 console.log('v7 shell loaded, JS pending');
+
+// ============================================================
+//  镭射预设专用: 连续光束层
+//  粒子点负责闪光球, 这里用真实三角面做从球体向外发射的镭射光.
+// ============================================================
+var LASER_BEAM_COUNT = 26;
+var laserBeamGroup = new THREE.Group();
+var laserBeamOpacity = 0;
+var laserBeamGeometry = new THREE.BufferGeometry();
+var laserBeamPositions = new Float32Array(LASER_BEAM_COUNT * 6 * 3);
+var laserBeamColors = new Float32Array(LASER_BEAM_COUNT * 6 * 3);
+var laserBeamPalette = [
+  new THREE.Color('#18ffe6'),
+  new THREE.Color('#52a8ff'),
+  new THREE.Color('#ff3ea5'),
+  new THREE.Color('#ffe86b'),
+  new THREE.Color('#9b7cff')
+];
+function laserBeamRand(seed) {
+  var x = Math.sin(seed * 127.1 + 41.7) * 43758.5453123;
+  return x - Math.floor(x);
+}
+function tintedLaserColor(index, strength) {
+  var src = laserBeamPalette[index % laserBeamPalette.length];
+  return new THREE.Color(
+    Math.min(1, src.r * strength),
+    Math.min(1, src.g * strength),
+    Math.min(1, src.b * strength)
+  );
+}
+var laserBeamDefs = [];
+for (var lbi = 0; lbi < LASER_BEAM_COUNT; lbi++) {
+  var baseAngle = (lbi / LASER_BEAM_COUNT) * Math.PI * 2;
+  var clusterBend = Math.sin(lbi * 1.73) * 0.15 + Math.sin(lbi * 0.61 + 1.4) * 0.08;
+  var angleJitter = (laserBeamRand(lbi + 0.13) - 0.5) * 0.46;
+  var strength = 0.60 + laserBeamRand(lbi + 2.77) * 0.40;
+  laserBeamDefs.push({
+    angle: baseAngle + clusterBend + angleJitter,
+    inner: 0.92 + laserBeamRand(lbi + 3.21) * 0.42,
+    outer: 16.5 + laserBeamRand(lbi + 4.35) * 12.5 + (lbi % 7 === 0 ? 5.8 : 0),
+    innerW: 0.016 + laserBeamRand(lbi + 5.49) * 0.050,
+    outerW: 0.20 + laserBeamRand(lbi + 6.63) * 0.82,
+    z0: 0.88 + laserBeamRand(lbi + 7.77) * 0.40,
+    z1: -6.4 - laserBeamRand(lbi + 8.91) * 9.4,
+    wobble: (laserBeamRand(lbi + 9.17) - 0.5) * 0.040,
+    drift: 0.030 + laserBeamRand(lbi + 10.31) * 0.070,
+    sparkSpread: 0.08 + laserBeamRand(lbi + 11.45) * 0.44,
+    sparkSpeed: 0.020 + laserBeamRand(lbi + 12.59) * 0.066,
+    strobeRate: 2.2 + laserBeamRand(lbi + 15.87) * 4.4,
+    strobePhase: laserBeamRand(lbi + 16.91) * Math.PI * 2,
+    duty: 0.38 + laserBeamRand(lbi + 17.05) * 0.32,
+    beatResponse: 0.18 + laserBeamRand(lbi + 18.19) * 0.58,
+    colorIndex: Math.floor(laserBeamRand(lbi + 13.73) * laserBeamPalette.length),
+    strength: strength
+  });
+}
+function setLaserBeamVertex(i, x, y, z, color) {
+  var p = i * 3;
+  laserBeamPositions[p] = x;
+  laserBeamPositions[p + 1] = y;
+  laserBeamPositions[p + 2] = z;
+  laserBeamColors[p] = color.r;
+  laserBeamColors[p + 1] = color.g;
+  laserBeamColors[p + 2] = color.b;
+}
+function buildLaserBeamGeometry() {
+  var vi = 0;
+  for (var i = 0; i < LASER_BEAM_COUNT; i++) {
+    var def = laserBeamDefs[i];
+    var a = def.angle;
+    var color = tintedLaserColor(def.colorIndex, def.strength);
+    var dirX = Math.cos(a), dirY = Math.sin(a);
+    var nX = -dirY, nY = dirX;
+    var inner = def.inner;
+    var outer = def.outer;
+    var innerW = def.innerW;
+    var outerW = def.outerW;
+    var z0 = def.z0;
+    var z1 = def.z1;
+    var ax = dirX * inner, ay = dirY * inner;
+    var bx = dirX * outer, by = dirY * outer;
+    var p0x = ax - nX * innerW, p0y = ay - nY * innerW;
+    var p1x = ax + nX * innerW, p1y = ay + nY * innerW;
+    var p2x = bx + nX * outerW, p2y = by + nY * outerW;
+    var p3x = bx - nX * outerW, p3y = by - nY * outerW;
+    setLaserBeamVertex(vi++, p0x, p0y, z0, color);
+    setLaserBeamVertex(vi++, p1x, p1y, z0, color);
+    setLaserBeamVertex(vi++, p2x, p2y, z1, color);
+    setLaserBeamVertex(vi++, p0x, p0y, z0, color);
+    setLaserBeamVertex(vi++, p2x, p2y, z1, color);
+    setLaserBeamVertex(vi++, p3x, p3y, z1, color);
+  }
+  laserBeamGeometry.setAttribute('position', new THREE.BufferAttribute(laserBeamPositions, 3));
+  laserBeamGeometry.setAttribute('color', new THREE.BufferAttribute(laserBeamColors, 3));
+}
+buildLaserBeamGeometry();
+var laserBeamMaterial = new THREE.MeshBasicMaterial({
+  transparent: true,
+  opacity: 0,
+  depthWrite: false,
+  depthTest: false,
+  blending: THREE.AdditiveBlending,
+  vertexColors: true,
+  side: THREE.DoubleSide
+});
+var laserBeamMesh = new THREE.Mesh(laserBeamGeometry, laserBeamMaterial);
+laserBeamMesh.frustumCulled = false;
+laserBeamMesh.renderOrder = 3;
+laserBeamMesh.visible = false;
+laserBeamGroup.add(laserBeamMesh);
+var laserCoreGeometry = new THREE.BufferGeometry();
+var laserCorePositions = new Float32Array(LASER_BEAM_COUNT * 2 * 3);
+var laserCoreColors = new Float32Array(LASER_BEAM_COUNT * 2 * 3);
+for (var lci = 0; lci < LASER_BEAM_COUNT; lci++) {
+  var lcDef = laserBeamDefs[lci];
+  var lca = lcDef.angle + lcDef.wobble * 1.8;
+  var lcc = tintedLaserColor(lcDef.colorIndex + 2, Math.min(1, lcDef.strength + 0.18));
+  var lcDirX = Math.cos(lca), lcDirY = Math.sin(lca);
+  var lcInner = Math.max(0.84, lcDef.inner - 0.16);
+  var lcOuter = lcDef.outer + 2.0 + laserBeamRand(lci + 14.2) * 4.5;
+  var lcBase = lci * 6;
+  laserCorePositions[lcBase] = lcDirX * lcInner;
+  laserCorePositions[lcBase + 1] = lcDirY * lcInner;
+  laserCorePositions[lcBase + 2] = lcDef.z0 + 0.13;
+  laserCorePositions[lcBase + 3] = lcDirX * lcOuter;
+  laserCorePositions[lcBase + 4] = lcDirY * lcOuter;
+  laserCorePositions[lcBase + 5] = lcDef.z1 - 1.4;
+  laserCoreColors[lcBase] = lcc.r;
+  laserCoreColors[lcBase + 1] = lcc.g;
+  laserCoreColors[lcBase + 2] = lcc.b;
+  laserCoreColors[lcBase + 3] = lcc.r;
+  laserCoreColors[lcBase + 4] = lcc.g;
+  laserCoreColors[lcBase + 5] = lcc.b;
+}
+laserCoreGeometry.setAttribute('position', new THREE.BufferAttribute(laserCorePositions, 3));
+laserCoreGeometry.setAttribute('color', new THREE.BufferAttribute(laserCoreColors, 3));
+var laserCoreMaterial = new THREE.LineBasicMaterial({
+  transparent: true,
+  opacity: 0,
+  depthWrite: false,
+  depthTest: false,
+  blending: THREE.AdditiveBlending,
+  vertexColors: true,
+  linewidth: 1
+});
+var laserCoreLines = new THREE.LineSegments(laserCoreGeometry, laserCoreMaterial);
+laserCoreLines.frustumCulled = false;
+laserCoreLines.renderOrder = 4;
+laserCoreLines.visible = false;
+laserBeamGroup.add(laserCoreLines);
+var LASER_SPARKS_PER_BEAM = 68;
+var LASER_SPARK_COUNT = LASER_BEAM_COUNT * LASER_SPARKS_PER_BEAM;
+var laserSparkGeometry = new THREE.BufferGeometry();
+var laserSparkPositions = new Float32Array(LASER_SPARK_COUNT * 3);
+var laserSparkColors = new Float32Array(LASER_SPARK_COUNT * 3);
+var laserSparkData = new Float32Array(LASER_SPARK_COUNT * 4);
+for (var lsi = 0; lsi < LASER_SPARK_COUNT; lsi++) {
+  var beamIndex = Math.floor(lsi / LASER_SPARKS_PER_BEAM);
+  var sparkIndex = lsi % LASER_SPARKS_PER_BEAM;
+  var sparkDef = laserBeamDefs[beamIndex];
+  var sparkColor = tintedLaserColor(sparkDef.colorIndex + sparkIndex, Math.min(1, sparkDef.strength + 0.12));
+  var sp = lsi * 3;
+  var sd = lsi * 4;
+  laserSparkData[sd] = beamIndex;
+  laserSparkData[sd + 1] = (sparkIndex + 0.5) / LASER_SPARKS_PER_BEAM;
+  laserSparkData[sd + 2] = Math.random();
+  laserSparkData[sd + 3] = Math.random();
+  laserSparkColors[sp] = sparkColor.r;
+  laserSparkColors[sp + 1] = sparkColor.g;
+  laserSparkColors[sp + 2] = sparkColor.b;
+}
+laserSparkGeometry.setAttribute('position', new THREE.BufferAttribute(laserSparkPositions, 3));
+laserSparkGeometry.setAttribute('color', new THREE.BufferAttribute(laserSparkColors, 3));
+var laserSparkMaterial = new THREE.PointsMaterial({
+  map: laserDotTexture,
+  transparent: true,
+  opacity: 0,
+  depthWrite: false,
+  depthTest: false,
+  blending: THREE.AdditiveBlending,
+  vertexColors: true,
+  size: 0.18,
+  sizeAttenuation: true
+});
+var laserSparkParticles = new THREE.Points(laserSparkGeometry, laserSparkMaterial);
+laserSparkParticles.frustumCulled = false;
+laserSparkParticles.renderOrder = 5;
+laserBeamGroup.add(laserSparkParticles);
+var LASER_BALL_COUNT = 4200;
+var laserBallGeometry = new THREE.BufferGeometry();
+var laserBallPositions = new Float32Array(LASER_BALL_COUNT * 3);
+var laserBallColors = new Float32Array(LASER_BALL_COUNT * 3);
+var laserBallData = new Float32Array(LASER_BALL_COUNT * 3);
+var laserBallColorA = new THREE.Color('#f8fbff');
+var laserBallColorB = new THREE.Color('#98b8ca');
+var laserBallColorC = new THREE.Color('#fff4bc');
+for (var lpi = 0; lpi < LASER_BALL_COUNT; lpi++) {
+  var y = 1 - (lpi / (LASER_BALL_COUNT - 1)) * 2;
+  var r = Math.sqrt(Math.max(0, 1 - y * y));
+  var theta = lpi * Math.PI * (3 - Math.sqrt(5));
+  var facetSeed = laserBeamRand(lpi + 31.7);
+  var tileBand = Math.floor((y + 1) * 18);
+  var tileShard = Math.floor(((theta / (Math.PI * 2)) % 1) * 52);
+  var mirror = laserBeamRand(tileBand * 37.1 + tileShard * 5.3);
+  var radius = 1.12 + (mirror - 0.5) * 0.020;
+  var p = lpi * 3;
+  laserBallPositions[p] = Math.cos(theta) * r * radius;
+  laserBallPositions[p + 1] = y * radius;
+  laserBallPositions[p + 2] = Math.sin(theta) * r * radius + 0.98;
+  var rim = Math.pow(Math.abs(r), 0.62);
+  var glint = mirror > 0.84 ? 1 : (mirror > 0.64 ? 0.58 : 0.24);
+  var col = laserBallColorB.clone().lerp(laserBallColorA, 0.34 + rim * 0.34 + glint * 0.28);
+  if (facetSeed > 0.92) col.lerp(laserBallColorC, 0.32);
+  laserBallColors[p] = col.r;
+  laserBallColors[p + 1] = col.g;
+  laserBallColors[p + 2] = col.b;
+  laserBallData[p] = facetSeed;
+  laserBallData[p + 1] = mirror;
+  laserBallData[p + 2] = theta;
+}
+laserBallGeometry.setAttribute('position', new THREE.BufferAttribute(laserBallPositions, 3));
+laserBallGeometry.setAttribute('color', new THREE.BufferAttribute(laserBallColors, 3));
+var laserBallMaterial = new THREE.PointsMaterial({
+  map: laserDotTexture,
+  transparent: true,
+  opacity: 0,
+  depthWrite: false,
+  depthTest: true,
+  blending: THREE.AdditiveBlending,
+  vertexColors: true,
+  size: 0.026,
+  sizeAttenuation: true
+});
+var laserBallPoints = new THREE.Points(laserBallGeometry, laserBallMaterial);
+laserBallPoints.frustumCulled = false;
+laserBallPoints.renderOrder = 6;
+laserBeamGroup.add(laserBallPoints);
+laserBeamGroup.visible = false;
+scene.add(laserBeamGroup);
+
+function updateLaserBeamLayer(dt) {
+  if (!laserBeamGroup || !laserBeamMaterial || !laserCoreMaterial || !laserSparkMaterial || !laserBallMaterial) return;
+  var active = fx && fx.preset === 7;
+  var target = active ? 1 : 0;
+  laserBeamOpacity += (target - laserBeamOpacity) * Math.min(1, dt * (active ? 8.5 : 12));
+  laserBeamGroup.visible = laserBeamOpacity > 0.012;
+  if (!laserBeamGroup.visible) return;
+  var flash = Math.min(1.5, uniforms.uBeat.value * 1.45 + uniforms.uBass.value * 0.42 + uniforms.uTreble.value * 0.34 + uniforms.uBurstAmt.value * 0.70);
+  laserBeamMesh.visible = false;
+  laserCoreLines.visible = false;
+  laserBeamMaterial.opacity = 0;
+  laserCoreMaterial.opacity = 0;
+  laserSparkMaterial.opacity = laserBeamOpacity * (0.62 + flash * 0.56);
+  laserSparkMaterial.size = 0.18 + flash * 0.070;
+  laserBallMaterial.opacity = laserBeamOpacity * (0.62 + flash * 0.16);
+  laserBallMaterial.size = 0.025 + flash * 0.0025;
+  var tLaser = uniforms.uTime.value;
+  for (var i = 0; i < LASER_SPARK_COUNT; i++) {
+    var d = i * 4;
+    var beam = laserSparkData[d] | 0;
+    var def = laserBeamDefs[beam];
+    var lane = laserSparkData[d + 1];
+    var seedA = laserSparkData[d + 2];
+    var seedB = laserSparkData[d + 3];
+    var strobeWave = Math.sin(tLaser * def.strobeRate + def.strobePhase + seedB * 0.65) * 0.5 + 0.5;
+    var beamGate = Math.max(0, (strobeWave - def.duty) / Math.max(0.001, 1 - def.duty));
+    beamGate = Math.pow(beamGate, 2.6);
+    beamGate = Math.max(beamGate, flash * def.beatResponse * (0.42 + seedA * 0.35));
+    var a = def.angle + def.wobble + Math.sin(tLaser * (0.12 + def.drift) + seedA * 6.283) * (0.012 + Math.abs(def.wobble));
+    var dirX = Math.cos(a), dirY = Math.sin(a);
+    var nX = -dirY, nY = dirX;
+    var flow = (lane + tLaser * (def.sparkSpeed + seedA * 0.030) + seedB * 0.24) % 1;
+    var rayT = Math.pow(flow, 0.90);
+    var radius = 1.22 + rayT * (9.5 + def.outer * 0.64);
+    var cross = (seedB - 0.5) * (def.sparkSpread * 0.54 + rayT * def.outerW * 0.42) + Math.sin(tLaser * (1.35 + seedA + def.drift) + seedB * 8.0) * (0.020 + def.outerW * 0.030);
+    var p = i * 3;
+    laserSparkPositions[p] = dirX * radius + nX * cross;
+    laserSparkPositions[p + 1] = dirY * radius + nY * cross;
+    laserSparkPositions[p + 2] = 0.96 + (seedA - 0.5) * (0.55 + rayT * 0.78) + Math.sin(tLaser * 1.2 + seedA * 10.0) * 0.10;
+    var trail = Math.pow(Math.max(0, Math.sin(flow * Math.PI * 9.0 - tLaser * (4.8 + seedA * 2.0) + seedB * 6.283)), 3.0);
+    var edgePop = Math.pow(1.0 - Math.abs(flow - 0.5) * 2.0, 0.65);
+    var brightness = beamGate * (0.18 + trail * 1.35 + edgePop * 0.36) * def.strength;
+    var sparkColorIndex = def.colorIndex + (i % 5);
+    var sparkColor = laserBeamPalette[sparkColorIndex % laserBeamPalette.length];
+    laserSparkColors[p] = sparkColor.r * brightness;
+    laserSparkColors[p + 1] = sparkColor.g * brightness;
+    laserSparkColors[p + 2] = sparkColor.b * brightness;
+  }
+  laserSparkGeometry.attributes.position.needsUpdate = true;
+  laserSparkGeometry.attributes.color.needsUpdate = true;
+  laserBeamGroup.rotation.copy(particles.rotation);
+  laserBeamGroup.rotation.z += uniforms.uTime.value * 0.08;
+  laserBallPoints.rotation.y = tLaser * 0.18;
+  laserBallPoints.rotation.x = Math.sin(tLaser * 0.13) * 0.06;
+  var pulseScale = 1 + flash * 0.055;
+  laserBeamGroup.scale.set(pulseScale, pulseScale, 1);
+}
 
 // ============================================================
 //  浮空粒子层 (独立 Points)
@@ -7637,7 +8056,7 @@ function readSavedLyricLayout() {
   try {
     var savedLayoutRaw = localStorage.getItem(LYRIC_LAYOUT_STORE_KEY);
     var raw = savedLayoutRaw ? (JSON.parse(savedLayoutRaw) || {}) : packagedDefaultLyricLayoutRaw();
-    var savedPreset = clampRange(Number(raw.preset) || 0, 0, 6);
+    var savedPreset = clampRange(Number(raw.preset) || 0, 0, VISUAL_PRESET_MAX_INDEX);
     if (savedPreset === 3 && raw.visualPresetSchema !== VISUAL_PRESET_SCHEMA) {
       savedPreset = 5;
     }
@@ -20925,6 +21344,7 @@ var presetMeta = [
   { name: '唱片', desc: '唱片 · 圆形封面' },
   { name: '星河', desc: '壁纸粒子 · 音乐律动' },
   { name: '安魂', desc: '骷髅·YUI7W', descHtml: '骷髅·<span class="pc-yui7w">YUI7W</span>' },
+  { name: '镭射', desc: '歌舞厅激光 · 节奏闪烁' },
 ];
 var presetIcons = [
   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 14c3-2 5-2 8 0s5 2 8 0M3 10c3-2 5-2 8 0s5 2 8 0M3 18c3-2 5-2 8 0s5 2 8 0"/></svg>',
@@ -20934,8 +21354,9 @@ var presetIcons = [
   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.4"/><path d="M16.5 5.2c2.1.9 3.4 2.4 4 4.5"/><path d="M18.8 3.2l1.5 4.8"/></svg>',
   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 15c2.2-4.4 4.4-4.4 6.6 0s4.4 4.4 6.6 0S20.6 10.6 23 15"/><path d="M3 9c2.2 2.2 4.4 2.2 6.6 0s4.4-2.2 6.6 0S20.6 11.2 23 9"/><circle cx="12" cy="12" r="1.7" fill="currentColor"/></svg>',
   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.2h4v6.2h4.2v3.8H14v7.6h-4v-7.6H5.8V9.4H10z"/></svg>',
+  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12 3.8 4.8"/><path d="M12 12 20.2 4.8"/><path d="M12 12 4.5 18.8"/><path d="M12 12 19.5 18.8"/><circle cx="12" cy="12" r="2.1" fill="currentColor" stroke="none"/></svg>',
 ];
-var presetDisplayOrder = [0, 6, 5, 4, 2, 1, 3];
+var presetDisplayOrder = [0, 7, 6, 5, 4, 2, 1, 3];
 var lyricColorPresets = [
   { name:'雾蓝', color:'#a9b8c8' },
   { name:'银蓝', color:'#9db8cf' },
@@ -22070,14 +22491,14 @@ function refreshPresetGrid() {
 function triggerPresetParticleTransition(fromPreset, toPreset) {
   presetTransition.active = true;
   presetTransition.start = uniforms.uTime.value;
-  presetTransition.duration = toPreset === 5 ? 0.30 : 0.24;
+  presetTransition.duration = toPreset === 5 ? 0.30 : (toPreset === 7 ? 0.36 : 0.24);
   presetTransition.from = fromPreset;
   presetTransition.to = toPreset;
   var newVisual = toPreset >= 4;
-  var wallpaperFlow = toPreset === 5;
+  var wallpaperFlow = toPreset === 5 || toPreset === 7;
   uniforms.uScatter.value = Math.max(uniforms.uScatter.value, fx.scatter + (newVisual ? (wallpaperFlow ? 0.008 : 0.024) : 0.12));
-  uniforms.uBurstAmt.value = Math.max(uniforms.uBurstAmt.value, wallpaperFlow ? 0.05 : 0.15);
-  camPunch = Math.max(camPunch, wallpaperFlow ? 0.04 : 0.12);
+  uniforms.uBurstAmt.value = Math.max(uniforms.uBurstAmt.value, toPreset === 7 ? 0.24 : (wallpaperFlow ? 0.05 : 0.15));
+  camPunch = Math.max(camPunch, toPreset === 7 ? 0.14 : (wallpaperFlow ? 0.04 : 0.12));
   for (var i = 0; i < 3; i++) {
     triggerRipple((Math.random() - 0.5) * 3.4, (Math.random() - 0.5) * 3.4, 0.58 + Math.random() * 0.32);
   }
@@ -22095,10 +22516,10 @@ function tickPresetTransition() {
   var t = Math.max(0, Math.min(1, raw));
   var wave = Math.sin(t * Math.PI);
   var newVisual = presetTransition.to >= 4;
-  var wallpaperFlow = presetTransition.to === 5;
-  uniforms.uScatter.value = Math.max(uniforms.uScatter.value, fx.scatter + wave * (newVisual ? (wallpaperFlow ? 0.008 : 0.026) : 0.16));
-  uniforms.uBurstAmt.value = Math.max(uniforms.uBurstAmt.value, wave * (wallpaperFlow ? 0.045 : (newVisual ? 0.12 : 0.15)));
-  uniforms.uPointScale.value = fx.point * (1 + wave * (wallpaperFlow ? 0.016 : 0.048));
+  var wallpaperFlow = presetTransition.to === 5 || presetTransition.to === 7;
+  uniforms.uScatter.value = Math.max(uniforms.uScatter.value, fx.scatter + wave * (newVisual ? (presetTransition.to === 7 ? 0.016 : (wallpaperFlow ? 0.008 : 0.026)) : 0.16));
+  uniforms.uBurstAmt.value = Math.max(uniforms.uBurstAmt.value, wave * (presetTransition.to === 7 ? 0.22 : (wallpaperFlow ? 0.045 : (newVisual ? 0.12 : 0.15))));
+  uniforms.uPointScale.value = fx.point * (1 + wave * (presetTransition.to === 7 ? 0.040 : (wallpaperFlow ? 0.016 : 0.048)));
   if (raw >= 1) {
     presetTransition.active = false;
     syncFxUniforms();
@@ -22123,8 +22544,9 @@ function setPreset(p, opts) {
     else if (p === 4) { orbit.userRadius = 6.5; orbit.userPhi = 0.04; orbit.userTheta = 0.0; orbit.baselineRadius = 6.5; orbit.baselinePhi = 0.04; }
     else if (p === 5) { orbit.userRadius = 9.4; orbit.userPhi = 0.34; orbit.userTheta = -0.52; orbit.baselineRadius = 9.4; orbit.baselinePhi = 0.34; }
     else if (p === 6) { orbit.userRadius = 7.4; orbit.userPhi = 0.10; orbit.userTheta = 0.18; orbit.baselineRadius = 7.4; orbit.baselinePhi = 0.10; }
+    else if (p === 7) { orbit.userRadius = 8.7; orbit.userPhi = 0.16; orbit.userTheta = -0.18; orbit.baselineRadius = 8.7; orbit.baselinePhi = 0.16; }
     else              { orbit.userRadius = 6.6; orbit.userPhi = 0.08; orbit.userTheta = 0.0; orbit.baselineRadius = 6.6; orbit.baselinePhi = 0.08; }
-    orbit.baselineTheta = p === 5 ? -0.52 : (p === 6 ? 0.18 : 0.0);
+    orbit.baselineTheta = p === 5 ? -0.52 : (p === 6 ? 0.18 : (p === 7 ? -0.18 : 0.0));
   }
   if (changed && !opts.silent) showToast('视觉预设: ' + presetMeta[p].name);
   var shouldCommitPlaybackPreset = !!opts.commitPlaybackPreset || !opts.noSave;
@@ -22149,7 +22571,7 @@ function syncFxUniforms() {
   uniforms.uCoverRes.value = normalizeCoverResolution(fx.coverResolution);
   uniforms.uBgFade.value = fx.bgFade;
   uniforms.uBloomStrength.value = fx.bloom ? fx.bloomStrength : 0;
-  if (bloomParticles) bloomParticles.visible = fx.bloom && fx.bloomStrength > 0.01;
+  if (bloomParticles) bloomParticles.visible = fx.preset !== 7 && fx.bloom && fx.bloomStrength > 0.01;
   uniforms.uEdgeEnabled.value = fx.edge ? 1 : 0;
   if (uniforms.uTintColor) uniforms.uTintColor.value.set(normalizeHexColor(fx.visualTintColor || '#9db8cf'));
   if (uniforms.uTintStrength) uniforms.uTintStrength.value = fx.visualTintMode === 'custom' ? 0.42 : 0;
@@ -27876,9 +28298,10 @@ function animate() {
   treble = Math.min(0.62, smoothTreb * 1.20) * fx.intensity;
   if (fx.preset >= 4) {
     var wallpaperAudio = fx.preset === 5;
-    var ringBass = smoothBass * (wallpaperAudio ? 1.10 : 1.58) + beatPulse * (wallpaperAudio ? 0.18 : 0.42) - smoothMid * 0.16 - smoothTreb * 0.06;
-    var ringMid = smoothMid * (wallpaperAudio ? 1.16 : 1.82) - smoothBass * 0.14 - smoothTreb * 0.07;
-    var ringTreble = smoothTreb * (wallpaperAudio ? 1.34 : 2.28) - smoothMid * 0.10 - smoothBass * 0.05;
+    var laserAudio = fx.preset === 7;
+    var ringBass = smoothBass * (laserAudio ? 1.36 : (wallpaperAudio ? 1.10 : 1.58)) + beatPulse * (laserAudio ? 0.70 : (wallpaperAudio ? 0.18 : 0.42)) - smoothMid * 0.16 - smoothTreb * 0.06;
+    var ringMid = smoothMid * (laserAudio ? 1.56 : (wallpaperAudio ? 1.16 : 1.82)) - smoothBass * 0.14 - smoothTreb * 0.07;
+    var ringTreble = smoothTreb * (laserAudio ? 2.42 : (wallpaperAudio ? 1.34 : 2.28)) - smoothMid * 0.10 - smoothBass * 0.05;
     bass = Math.pow(clamp01((ringBass - 0.050) / 0.58), 0.72) * fx.intensity;
     mid = Math.pow(clamp01((ringMid - 0.045) / 0.46), 0.78) * fx.intensity;
     treble = Math.pow(clamp01((ringTreble - 0.030) / 0.34), 0.84) * fx.intensity;
@@ -27887,6 +28310,10 @@ function animate() {
       mid = Math.min(mid, 0.40 * fx.intensity);
       treble = Math.min(treble, 0.36 * fx.intensity);
       beatPulse *= 0.34;
+    } else if (laserAudio) {
+      bass = Math.min(1.08, bass * 1.10 + beatPulse * 0.18);
+      mid = Math.min(0.88, mid * 1.06 + beatPulse * 0.05);
+      treble = Math.min(0.90, treble * 1.18 + beatPulse * 0.08);
     }
   }
   if (djMode.active) {
@@ -27932,8 +28359,9 @@ function animate() {
   // v7.2 旋转 = 头部+眼球追踪 + 鼠标/手势拖动 + 惯性
   tickGestureRotation(dt);
   var skullPresetActive = fx && fx.preset === SKULL_PRESET_INDEX;
+  var laserPresetActive = fx && fx.preset === 7;
   particles.visible = !skullPresetActive;
-  if (bloomParticles) bloomParticles.visible = !skullPresetActive && fx.bloom && fx.bloomStrength > 0.01;
+  if (bloomParticles) bloomParticles.visible = !skullPresetActive && !laserPresetActive && fx.bloom && fx.bloomStrength > 0.01;
   if (floatGroup) floatGroup.visible = !skullPresetActive;
   if (backCoverGroup) backCoverGroup.visible = !skullPresetActive;
   var targetRotY = orbit.centerLocked ? 0 : (headParallax.active ? headParallax.x * 0.5 : 0) + gestureRotation.y;
@@ -27950,6 +28378,7 @@ function animate() {
   if (backCoverGroup) {
     backCoverGroup.rotation.copy(particles.rotation);
   }
+  updateLaserBeamLayer(dt);
   updateSkullParticleLayer(dt);
   updateStageLyrics3D(dt);
   syncDesktopOverlayState();
