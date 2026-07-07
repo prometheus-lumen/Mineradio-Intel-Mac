@@ -261,22 +261,23 @@ body.home-wallpaper-preview #canvas-container{filter:none}
 .home-hero::after{content:'';position:absolute;left:28px;right:28px;bottom:22px;height:1px;background:linear-gradient(90deg,color-mix(in srgb,var(--home-accent) 0%,transparent),color-mix(in srgb,var(--home-accent) 52%,transparent),rgba(36,66,255,.24),rgba(248,244,238,.18),color-mix(in srgb,var(--home-accent) 0%,transparent));opacity:.82;pointer-events:none}
 .home-hero-inner{position:relative;z-index:2;height:100%;display:grid;grid-template-columns:minmax(0,1.16fr) minmax(150px,.64fr);grid-template-rows:auto auto auto auto minmax(150px,1fr);column-gap:18px}
 .home-hero-inner.home-construction-inner{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:18px;padding:4px 2px;min-height:100%}
-.home-hero-inner.home-weather-inner{--weather-beat:0;--weather-bass:0;--weather-energy:0;grid-template-rows:auto auto auto auto 1fr;align-content:start}
+.home-hero-inner.home-weather-inner{--weather-beat:0;--weather-bass:0;--weather-energy:0;grid-template-rows:auto auto auto auto minmax(240px,1fr);align-content:stretch}
 .home-kicker{grid-column:1;font-size:10px;font-weight:780;letter-spacing:.18em;color:color-mix(in srgb,var(--home-accent) 62%,rgba(255,255,255,.36));text-transform:uppercase;margin-bottom:14px}
 .home-title{grid-column:1;font-size:clamp(34px,4.6vw,58px);line-height:.98;font-weight:760;letter-spacing:0;color:rgba(255,255,255,.98);max-width:380px;text-shadow:0 10px 36px rgba(0,0,0,.26)}
 .home-title.home-construction-title{max-width:620px;font-size:clamp(32px,4.5vw,64px);line-height:1.08}
 .home-sub{grid-column:1;margin-top:14px;font-size:13px;line-height:1.62;color:rgba(255,255,255,.62);max-width:348px}
 .home-weather-meta{grid-column:1;display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
 .home-weather-pill{height:28px;padding:0 10px;border-radius:999px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.050);display:inline-flex;align-items:center;color:rgba(255,255,255,.70);font-size:11px;font-weight:680}
-.home-quick-row{grid-column:1;position:relative;z-index:3;display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+.home-quick-row{grid-column:1;position:relative;z-index:6;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:22px}
 .home-chip{height:32px;padding:0 13px;border-radius:999px;border:1px solid rgba(255,255,255,.11);background:rgba(255,255,255,.060);color:rgba(255,255,255,.76);font-family:inherit;font-size:11.5px;font-weight:680;cursor:pointer;transition:background .18s,border-color .18s,color .18s,transform .18s,box-shadow .18s}
 .home-chip:hover{background:color-mix(in srgb,var(--home-accent) 10%,transparent);border-color:color-mix(in srgb,var(--home-accent) 38%,rgba(255,255,255,.10));color:#fff;box-shadow:0 10px 26px color-mix(in srgb,var(--home-accent) 8%,transparent);transform:translateY(-1px)}
 .home-console-chip{height:36px;border-color:color-mix(in srgb,var(--home-accent) 34%,rgba(255,255,255,.12));background:color-mix(in srgb,var(--home-accent) 12%,rgba(255,255,255,.055));color:#fff}
 .home-visual{grid-column:2;grid-row:2 / span 2;position:relative;align-self:center;justify-self:end;width:100%;max-width:300px;height:74px;margin-top:0;pointer-events:none;filter:drop-shadow(0 18px 34px rgba(0,0,0,.28))}
-.home-weather-inner .home-visual{grid-row:1 / span 5;height:300px;max-width:286px;align-self:center;filter:drop-shadow(0 24px 48px rgba(0,0,0,.34))}
+.home-weather-side{grid-column:2;grid-row:1 / span 4;align-self:start;justify-self:end;width:min(286px,100%);display:grid}
+.home-weather-inner .home-visual{grid-column:auto;grid-row:auto;width:100%;height:auto;max-width:none;align-self:start;filter:drop-shadow(0 24px 48px rgba(0,0,0,.34))}
 .home-visual.generated .home-sleeve,.home-visual.generated .home-disc{display:none}
 .home-radio-img{display:none}
-.home-now-cover{position:absolute;right:0;top:50%;width:min(258px,100%);aspect-ratio:1;border-radius:28px;background:linear-gradient(145deg,rgba(255,255,255,.11),rgba(255,255,255,.035));border:1px solid rgba(255,255,255,.12);box-shadow:0 28px 72px rgba(0,0,0,.42),0 0 calc(18px + var(--weather-beat) * 30px) color-mix(in srgb,var(--home-accent) 16%,transparent),inset 0 1px 0 rgba(255,255,255,.14);overflow:hidden;transform:translateY(-50%) scale(calc(1 + var(--weather-beat) * .035 + var(--weather-bass) * .025));transition:transform .08s linear,box-shadow .08s linear}
+.home-now-cover{position:relative;right:auto;top:auto;width:100%;aspect-ratio:1;border-radius:28px;background:linear-gradient(145deg,rgba(255,255,255,.11),rgba(255,255,255,.035));border:1px solid rgba(255,255,255,.12);box-shadow:0 28px 72px rgba(0,0,0,.42),0 0 calc(18px + var(--weather-beat) * 30px) color-mix(in srgb,var(--home-accent) 16%,transparent),inset 0 1px 0 rgba(255,255,255,.14);overflow:hidden;transform:scale(calc(1 + var(--weather-beat) * .035 + var(--weather-bass) * .025));transition:transform .08s linear,box-shadow .08s linear}
 .home-now-cover-art{position:absolute;inset:0;background:radial-gradient(circle at 34% 26%,rgba(255,255,255,.22),transparent 28%),linear-gradient(135deg,color-mix(in srgb,var(--home-accent) 40%,#191b22),rgba(6,7,10,.92));background-size:cover;background-position:center;filter:saturate(calc(1.04 + var(--weather-energy) * .18)) brightness(calc(.92 + var(--weather-beat) * .08));transform:scale(calc(1.012 + var(--weather-bass) * .025));transition:background-image .45s ease,filter .10s linear,transform .10s linear}
 .home-now-cover-art:not(.has-cover)::before{content:'';position:absolute;inset:22%;border-radius:50%;background:repeating-radial-gradient(circle,rgba(255,255,255,.15) 0 1px,transparent 1px 9px),conic-gradient(from 180deg,var(--home-accent),rgba(244,210,138,.82),rgba(36,66,255,.68),var(--home-accent));box-shadow:inset 0 0 0 18px rgba(6,7,10,.48)}
 .home-now-cover::before{content:'';position:absolute;inset:0;z-index:1;background:linear-gradient(145deg,rgba(255,255,255,.18),transparent 30%,rgba(0,0,0,.10) 58%,rgba(0,0,0,.62));pointer-events:none}
@@ -296,6 +297,43 @@ body.home-wallpaper-preview #canvas-container{filter:none}
 .home-radio-badge{display:none}
 .home-wave-track{position:absolute;left:0;right:0;top:50%;height:44px;display:flex;align-items:center;gap:4px;opacity:.94;mix-blend-mode:screen;transform:translateY(-50%)}
 .home-wave-track span{flex:1;min-width:3px;border-radius:999px;background:linear-gradient(180deg,#fff,var(--home-accent));box-shadow:0 0 12px color-mix(in srgb,var(--home-accent) 55%,transparent);height:5px;transform-origin:bottom;transition:height .08s linear,opacity .08s linear}
+.home-calendar-card{grid-column:1 / -1;grid-row:5;align-self:stretch;position:relative;min-height:0;margin-top:28px;border-radius:22px;border:1px solid rgba(255,255,255,.10);background:linear-gradient(145deg,rgba(255,255,255,.070),rgba(255,255,255,.028));box-shadow:0 18px 54px rgba(0,0,0,.30),inset 0 1px 0 rgba(255,255,255,.080);padding:20px;overflow:visible}
+.home-calendar-card::before{content:'';position:absolute;inset:0;border-radius:inherit;background:linear-gradient(118deg,color-mix(in srgb,var(--home-accent) 18%,transparent),transparent 44%,rgba(255,255,255,.035));pointer-events:none}
+.home-calendar-face{position:relative;z-index:1;height:100%;min-height:100%;display:grid;grid-template-columns:minmax(0,1fr) clamp(116px,16%,170px);grid-template-rows:1fr 1fr;gap:14px}
+.home-calendar-time{grid-row:1 / span 2;display:flex;align-items:center;justify-content:center;min-width:0;border-radius:24px;background:rgba(0,0,0,.22);box-shadow:inset 0 1px 0 rgba(255,255,255,.08);font-size:clamp(78px,12vw,138px);line-height:.9;font-weight:780;letter-spacing:0;color:rgba(255,255,255,.97);text-shadow:0 18px 44px rgba(0,0,0,.42)}
+.home-calendar-year,.home-calendar-daybox{border-radius:18px;background:rgba(0,0,0,.20);box-shadow:inset 0 1px 0 rgba(255,255,255,.075);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.94)}
+.home-calendar-year{font-size:clamp(28px,4vw,46px);font-weight:780}
+.home-calendar-daybox{flex-direction:column;gap:6px;overflow:hidden}
+.home-calendar-weekday{font-size:clamp(17px,2.5vw,28px);font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.home-calendar-date{width:100%;padding-top:10px;border-top:1px solid rgba(255,255,255,.08);font-size:clamp(24px,3.6vw,40px);line-height:1;font-weight:780;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.home-sleep-trigger-wrap{position:relative;margin-left:auto;display:flex;align-items:center;justify-content:flex-end;gap:10px;min-width:164px}
+.home-sleep-icon{position:relative;z-index:3;width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,.14);background:rgba(0,0,0,.28);color:rgba(255,255,255,.80);display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 14px 34px rgba(0,0,0,.30),inset 0 1px 0 rgba(255,255,255,.10);transition:background .18s,color .18s,transform .18s,border-color .18s}
+.home-sleep-icon svg{width:18px;height:18px;stroke:currentColor;stroke-width:2;fill:none}
+.home-sleep-icon:hover,.home-sleep-icon.active{background:color-mix(in srgb,var(--home-accent) 18%,rgba(0,0,0,.34));border-color:color-mix(in srgb,var(--home-accent) 42%,rgba(255,255,255,.18));color:#fff;transform:translateY(-1px)}
+.home-sleep-countdown{position:relative;z-index:2;display:none;align-items:center;justify-content:center;min-width:116px;height:32px;padding:0 12px;border-radius:999px;border:1px solid color-mix(in srgb,var(--home-accent) 20%,rgba(255,255,255,.10));background:linear-gradient(145deg,rgba(255,255,255,.070),rgba(0,0,0,.18));box-shadow:0 12px 30px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.08);color:rgba(255,255,255,.86);font-size:11px;line-height:1;font-weight:780;letter-spacing:.04em;white-space:nowrap;text-shadow:0 8px 18px rgba(0,0,0,.38)}
+.home-sleep-countdown.show{display:flex}
+.home-sleep-countdown.pending{color:color-mix(in srgb,var(--home-accent) 72%,#fff);border-color:color-mix(in srgb,var(--home-accent) 36%,rgba(255,255,255,.12));background:linear-gradient(145deg,color-mix(in srgb,var(--home-accent) 15%,rgba(255,255,255,.060)),rgba(0,0,0,.20))}
+.home-sleep-popover{position:absolute;z-index:9;right:0;bottom:calc(100% + 12px);width:min(254px,calc(100vw - 44px));padding:12px;border-radius:18px;border:1px solid rgba(255,255,255,.11);background:linear-gradient(145deg,rgba(18,19,23,.94),rgba(7,8,11,.92));box-shadow:0 24px 70px rgba(0,0,0,.52),inset 0 1px 0 rgba(255,255,255,.08);backdrop-filter:blur(26px) saturate(1.18);-webkit-backdrop-filter:blur(26px) saturate(1.18);opacity:0;visibility:hidden;pointer-events:none;transform:translateY(-8px) scale(.98);transition:opacity .18s,visibility .18s,transform .18s}
+.home-sleep-popover.show{opacity:1;visibility:visible;pointer-events:auto;transform:translateY(0) scale(1)}
+.home-sleep-popover::after{content:'';position:absolute;right:14px;bottom:-6px;width:12px;height:12px;transform:rotate(45deg);background:rgba(7,8,11,.92);border-right:1px solid rgba(255,255,255,.10);border-bottom:1px solid rgba(255,255,255,.10)}
+.home-sleep-pop-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.home-sleep-pop-title{font-size:12px;font-weight:780;color:rgba(255,255,255,.88)}
+.home-sleep-row{display:grid;grid-template-columns:minmax(0,1fr) 74px;gap:8px;align-items:center}
+.home-sleep-status{min-width:0;font-size:11px;line-height:1.32;font-weight:680;color:rgba(255,255,255,.58)}
+.home-sleep-status.active{color:color-mix(in srgb,var(--home-accent) 70%,#fff)}
+.home-sleep-input{height:30px;width:100%;border-radius:12px;border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.18);color:rgba(255,255,255,.88);font-family:inherit;font-size:12px;font-weight:760;text-align:center;outline:none}
+.home-sleep-input:focus{border-color:color-mix(in srgb,var(--home-accent) 42%,rgba(255,255,255,.16));box-shadow:0 0 0 3px color-mix(in srgb,var(--home-accent) 10%,transparent)}
+.home-sleep-switch-row{position:relative;z-index:1;margin-top:10px;display:flex;align-items:center;justify-content:space-between;gap:12px;color:rgba(255,255,255,.66);font-size:10.5px;font-weight:650;line-height:1.25}
+.home-sleep-switch-row input{position:absolute;opacity:0;pointer-events:none}
+.home-sleep-switch{position:relative;flex:0 0 auto;width:42px;height:24px;border-radius:999px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.10);box-shadow:inset 0 1px 4px rgba(0,0,0,.28);transition:background .18s,border-color .18s,box-shadow .18s}
+.home-sleep-switch::before{content:'';position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,.82);box-shadow:0 4px 12px rgba(0,0,0,.28);transition:transform .18s,background .18s}
+.home-sleep-switch-row input:checked + .home-sleep-switch{background:color-mix(in srgb,var(--home-accent) 38%,rgba(255,255,255,.10));border-color:color-mix(in srgb,var(--home-accent) 52%,rgba(255,255,255,.14));box-shadow:0 0 20px color-mix(in srgb,var(--home-accent) 14%,transparent),inset 0 1px 4px rgba(0,0,0,.24)}
+.home-sleep-switch-row input:checked + .home-sleep-switch::before{transform:translateX(18px);background:#fff}
+.home-sleep-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.home-sleep-btn{height:31px;border:0;border-radius:12px;background:rgba(255,255,255,.070);color:rgba(255,255,255,.72);font-family:inherit;font-size:11px;font-weight:760;cursor:pointer;transition:background .18s,color .18s,transform .18s,box-shadow .18s}
+.home-sleep-btn.primary{background:color-mix(in srgb,var(--home-accent) 18%,rgba(255,255,255,.075));color:#fff;box-shadow:0 10px 26px color-mix(in srgb,var(--home-accent) 10%,transparent)}
+.home-sleep-btn:hover{background:rgba(255,255,255,.12);color:#fff;transform:translateY(-1px)}
+.home-sleep-btn.primary:hover{background:color-mix(in srgb,var(--home-accent) 24%,rgba(255,255,255,.090))}
 @keyframes home-disc-turn{to{transform:rotate(360deg)}}
 @keyframes home-eq-rise{0%,100%{transform:scaleY(.68);opacity:.66}45%{transform:scaleY(1);opacity:1}}
 .home-mosaic{grid-column:1 / -1;grid-row:5;align-self:end;display:grid;grid-template-columns:1.18fr .82fr;grid-template-rows:1fr 1fr;gap:10px;height:min(216px,26vh);min-height:150px;margin-top:18px}
@@ -384,6 +422,10 @@ body.empty-home-active.controls-visible #empty-home{bottom:128px}
 .home-weather-inner .home-visual.generated{height:300px!important;max-width:286px!important;align-self:center!important}
 @media (max-height:760px){.home-visual.generated{height:64px!important;max-width:260px!important}}
 @media (max-height:760px){.home-weather-inner .home-visual.generated{height:238px!important;max-width:238px!important}}
+@media (max-height:760px){.home-weather-side{width:min(238px,100%);gap:10px}.home-calendar-card{min-height:142px;padding:10px;border-radius:18px}.home-calendar-face{min-height:122px;grid-template-columns:minmax(0,1fr) 66px}.home-calendar-time{font-size:clamp(38px,5vw,58px)}.home-calendar-year{font-size:20px}.home-calendar-date{font-size:17px}.home-sleep-row{grid-template-columns:minmax(0,1fr) 66px}.home-sleep-actions{gap:6px}.home-sleep-btn{height:28px}}
+@media (max-height:700px){.home-weather-side{width:min(210px,100%);gap:8px}.home-calendar-card{min-height:124px;padding:9px}.home-calendar-face{min-height:106px;grid-template-columns:minmax(0,1fr) 58px;gap:6px}.home-calendar-time{font-size:clamp(34px,4.6vw,50px)}.home-calendar-year{font-size:17px}.home-calendar-weekday{font-size:11px}.home-calendar-date{font-size:15px}.home-sleep-switch-row{margin-top:7px;font-size:9.8px}.home-sleep-actions{margin-top:8px}}
+@media (max-width:840px){.home-weather-side{grid-column:1;grid-row:auto;justify-self:stretch;width:100%;grid-template-columns:minmax(112px,150px) minmax(0,1fr);grid-template-rows:auto;align-items:stretch;margin-top:16px}.home-weather-side .home-visual{display:block!important;height:auto!important;max-width:none!important}.home-weather-side .home-now-cover{height:auto}.home-calendar-card{min-height:100%}.home-calendar-face{min-height:128px}.home-calendar-time{font-size:clamp(38px,9vw,64px)}}
+@media (max-width:620px){.home-weather-side{grid-template-columns:1fr;margin-top:14px}.home-weather-side .home-visual{display:none!important}.home-calendar-card{padding:13px}.home-sleep-trigger-wrap{min-width:142px;gap:8px}.home-sleep-countdown{min-width:96px;padding:0 10px;font-size:10px}.home-sleep-row{grid-template-columns:minmax(0,1fr) 72px}}
 
 /* ---------- 顶部右侧按钮 ---------- */
 #top-right{position:fixed;z-index:10;top:24px;right:24px;display:flex;align-items:center;gap:10px}
@@ -1998,17 +2040,54 @@ html.control-glass-svg-ok #visual-guide-btn:hover{
         <div class="home-weather-meta" id="home-weather-meta"></div>
         <div class="home-quick-row">
           <button class="home-chip home-console-chip" type="button" data-home-radio-start>播放天气电台</button>
-        </div>
-        <div class="home-visual generated" id="home-weather-visual" aria-hidden="true">
-          <div class="home-now-cover" id="home-now-cover">
-            <div class="home-now-cover-art" id="home-now-cover-art"></div>
-            <div class="home-now-cover-meta">
-              <div class="home-now-cover-kicker" id="home-now-cover-kicker">Now Playing</div>
-              <div class="home-now-cover-title" id="home-now-cover-title">暂无播放</div>
-              <div class="home-now-cover-artist" id="home-now-cover-artist">播放一首歌后显示专辑封面</div>
+          <div class="home-sleep-trigger-wrap">
+            <button class="home-sleep-icon" id="home-sleep-icon" type="button" onclick="toggleHomeSleepPopover(event)" aria-label="定时关闭">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle><path d="M12 7v5l3 2"></path><path d="M8 3 5 6"></path><path d="m16 3 3 3"></path></svg>
+            </button>
+            <div class="home-sleep-countdown" id="home-sleep-countdown" aria-live="polite"></div>
+            <div class="home-sleep-popover" id="home-sleep-popover">
+              <div class="home-sleep-pop-head">
+                <div class="home-sleep-pop-title">定时关闭</div>
+                <div class="home-sleep-status" id="home-sleep-status">未开启</div>
+              </div>
+              <div class="home-sleep-row">
+                <div class="home-sleep-status">分钟</div>
+                <input class="home-sleep-input" id="home-sleep-minutes" type="number" min="1" max="720" step="1" value="30" aria-label="定时关闭分钟数">
+              </div>
+              <label class="home-sleep-switch-row">
+                <span>倒计时结束后播完本首歌再关闭</span>
+                <input id="home-sleep-after-song" type="checkbox">
+                <span class="home-sleep-switch" aria-hidden="true"></span>
+              </label>
+              <div class="home-sleep-actions">
+                <button class="home-sleep-btn primary" type="button" onclick="startHomeSleepTimer()">开启</button>
+                <button class="home-sleep-btn" type="button" onclick="cancelHomeSleepTimer(true)">取消</button>
+              </div>
             </div>
           </div>
-          <div class="home-wave-track" id="home-wave-track"></div>
+        </div>
+        <div class="home-weather-side">
+          <div class="home-visual generated" id="home-weather-visual" aria-hidden="true">
+            <div class="home-now-cover" id="home-now-cover">
+              <div class="home-now-cover-art" id="home-now-cover-art"></div>
+              <div class="home-now-cover-meta">
+                <div class="home-now-cover-kicker" id="home-now-cover-kicker">Now Playing</div>
+                <div class="home-now-cover-title" id="home-now-cover-title">暂无播放</div>
+                <div class="home-now-cover-artist" id="home-now-cover-artist">播放一首歌后显示专辑封面</div>
+              </div>
+            </div>
+            <div class="home-wave-track" id="home-wave-track"></div>
+          </div>
+        </div>
+        <div class="home-calendar-card" id="home-calendar-card">
+          <div class="home-calendar-face">
+            <div class="home-calendar-time" id="home-calendar-time">--:--</div>
+            <div class="home-calendar-year" id="home-calendar-year">----</div>
+            <div class="home-calendar-daybox">
+              <div class="home-calendar-weekday" id="home-calendar-weekday">---</div>
+              <div class="home-calendar-date" id="home-calendar-date">--/--</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -2858,6 +2937,7 @@ var homeCardLayoutState = null;
 var homeCardDragActive = false;
 var HOME_LISTEN_STATS_KEY = 'mineradio-listen-stats-v1';
 var HOME_WEATHER_CITY_KEY = 'mineradio-weather-city';
+var HOME_SLEEP_TIMER_KEY = 'mineradio-home-sleep-timer-v1';
 var homeWeatherRadioState = { loading: false, loaded: false, city: localStorage.getItem(HOME_WEATHER_CITY_KEY) || '上海', weather: null, radio: null, error: '', updatedAt: 0 };
 var homeWeatherToken = 0;
 var homeWeatherLoadTimer = null;
@@ -2867,6 +2947,8 @@ var homeWeatherPrewarmStarted = false;
 var homeWeatherSilentPrewarmActive = false;
 var weatherRadioStartBusy = false;
 var activeRadioContext = null;
+var homeClockTimer = null;
+var homeSleepState = readHomeSleepTimerState();
 var listenStatsState = loadListenStatsState();
 var listenSession = null;
 var appPerfMarks = [];
@@ -16754,6 +16836,192 @@ function updateHomeNowCover(force) {
   if (title) title.textContent = song ? (song.name || song.title || '正在播放') : '暂无播放';
   if (artist) artist.textContent = song ? (song.artist || songSourceLabel(song) || '未知歌手') : '播放一首歌后显示专辑封面';
 }
+function readHomeSleepTimerState() {
+  try {
+    var raw = localStorage.getItem(HOME_SLEEP_TIMER_KEY);
+    if (!raw) return { active:false, endsAt:0, waitCurrent:false, pendingAfterSong:false, minutes:30 };
+    var data = JSON.parse(raw);
+    return {
+      active: !!data.active,
+      endsAt: Number(data.endsAt) || 0,
+      waitCurrent: !!data.waitCurrent,
+      pendingAfterSong: !!data.pendingAfterSong,
+      minutes: Math.max(1, Math.min(720, Number(data.minutes) || 30))
+    };
+  } catch (e) {
+    return { active:false, endsAt:0, waitCurrent:false, pendingAfterSong:false, minutes:30 };
+  }
+}
+function saveHomeSleepTimerState() {
+  try { localStorage.setItem(HOME_SLEEP_TIMER_KEY, JSON.stringify(homeSleepState)); } catch (e) {}
+}
+function padHomeTime(n) {
+  n = Math.floor(Number(n) || 0);
+  return n < 10 ? '0' + n : String(n);
+}
+function formatHomeSleepCountdown(ms) {
+  var total = Math.max(0, Math.ceil(ms / 1000));
+  var h = Math.floor(total / 3600);
+  var m = Math.floor((total % 3600) / 60);
+  var s = total % 60;
+  return h > 0 ? (h + ':' + padHomeTime(m) + ':' + padHomeTime(s)) : (padHomeTime(m) + ':' + padHomeTime(s));
+}
+function shouldHomeSleepWaitForCurrentSong() {
+  return !!(homeSleepState && homeSleepState.waitCurrent && audio && currentIdx >= 0 && isFinite(audio.duration) && audio.duration > 0 && audio.currentTime < audio.duration - 1.2);
+}
+function updateHomeClockAndSleep() {
+  var now = new Date();
+  var dateEl = document.getElementById('home-calendar-date');
+  var yearEl = document.getElementById('home-calendar-year');
+  var weekdayEl = document.getElementById('home-calendar-weekday');
+  var timeEl = document.getElementById('home-calendar-time');
+  var statusEl = document.getElementById('home-sleep-status');
+  var iconEl = document.getElementById('home-sleep-icon');
+  var countdownEl = document.getElementById('home-sleep-countdown');
+  var inputEl = document.getElementById('home-sleep-minutes');
+  var waitEl = document.getElementById('home-sleep-after-song');
+  function setCountdownText(text, pending) {
+    if (!countdownEl) return;
+    countdownEl.textContent = text || '';
+    countdownEl.classList.toggle('show', !!text);
+    countdownEl.classList.toggle('pending', !!pending);
+  }
+  if (yearEl) yearEl.textContent = String(now.getFullYear());
+  if (weekdayEl) weekdayEl.textContent = now.toLocaleDateString('en-US', { weekday:'short' }).toUpperCase();
+  if (dateEl) dateEl.textContent = padHomeTime(now.getMonth() + 1) + '/' + padHomeTime(now.getDate());
+  if (timeEl) timeEl.textContent = padHomeTime(now.getHours()) + ':' + padHomeTime(now.getMinutes());
+  if (inputEl && document.activeElement !== inputEl) inputEl.value = String(homeSleepState.minutes || 30);
+  if (waitEl && document.activeElement !== waitEl) waitEl.checked = !!homeSleepState.waitCurrent;
+  if (iconEl) iconEl.classList.toggle('active', !!homeSleepState.active || !!homeSleepState.pendingAfterSong);
+  if (statusEl) statusEl.classList.toggle('active', !!homeSleepState.active || !!homeSleepState.pendingAfterSong);
+  if (homeSleepState.pendingAfterSong) {
+    if (statusEl) statusEl.textContent = '等待本首歌播完后关闭';
+    setCountdownText('播完后关闭', true);
+    return;
+  }
+  if (!homeSleepState.active) {
+    if (statusEl) statusEl.textContent = '定时关闭未开启';
+    setCountdownText('', false);
+    return;
+  }
+  var left = homeSleepState.endsAt - Date.now();
+  if (left <= 0) {
+    if (shouldHomeSleepWaitForCurrentSong()) {
+      homeSleepState.active = false;
+      homeSleepState.pendingAfterSong = true;
+      saveHomeSleepTimerState();
+      if (statusEl) statusEl.textContent = '等待本首歌播完后关闭';
+      setCountdownText('播完后关闭', true);
+      showToast('倒计时结束，本首歌播完后关闭');
+      return;
+    }
+    performHomeSleepClose('timer');
+    return;
+  }
+  var countdownText = formatHomeSleepCountdown(left);
+  if (statusEl) statusEl.textContent = '将在 ' + countdownText + ' 后关闭';
+  setCountdownText('剩余 ' + countdownText, false);
+}
+function ensureHomeClockTimer() {
+  if (homeClockTimer) return;
+  updateHomeClockAndSleep();
+  homeClockTimer = setInterval(updateHomeClockAndSleep, 1000);
+}
+function startHomeSleepTimer() {
+  var inputEl = document.getElementById('home-sleep-minutes');
+  var waitEl = document.getElementById('home-sleep-after-song');
+  var minutes = inputEl ? Number(inputEl.value) : 30;
+  minutes = Math.max(1, Math.min(720, Math.round(minutes || 30)));
+  homeSleepState = {
+    active: true,
+    endsAt: Date.now() + minutes * 60000,
+    waitCurrent: !!(waitEl && waitEl.checked),
+    pendingAfterSong: false,
+    minutes: minutes
+  };
+  saveHomeSleepTimerState();
+  updateHomeClockAndSleep();
+  closeHomeSleepPopover();
+  showToast('已开启定时关闭: ' + minutes + ' 分钟');
+}
+function cancelHomeSleepTimer(show) {
+  homeSleepState.active = false;
+  homeSleepState.endsAt = 0;
+  homeSleepState.pendingAfterSong = false;
+  saveHomeSleepTimerState();
+  updateHomeClockAndSleep();
+  closeHomeSleepPopover();
+  if (show) showToast('已取消定时关闭');
+}
+function toggleHomeSleepPopover(e) {
+  if (e && e.stopPropagation) e.stopPropagation();
+  var pop = document.getElementById('home-sleep-popover');
+  if (!pop) return;
+  pop.classList.toggle('show');
+}
+function closeHomeSleepPopover() {
+  var pop = document.getElementById('home-sleep-popover');
+  if (pop) pop.classList.remove('show');
+}
+function performHomeSleepClose(reason) {
+  homeSleepState.active = false;
+  homeSleepState.pendingAfterSong = false;
+  homeSleepState.endsAt = 0;
+  saveHomeSleepTimerState();
+  updateHomeClockAndSleep();
+  showToast(reason === 'after-song' ? '本首歌已播完，正在关闭' : '定时关闭时间到');
+  var api = window.desktopWindow;
+  if (api && api.isDesktop && typeof api.close === 'function') {
+    api.close();
+    return true;
+  }
+  try { window.close(); return true; } catch (e) {}
+  return false;
+}
+function handleHomeSleepTrackEnded() {
+  if (!homeSleepState || !homeSleepState.pendingAfterSong) return false;
+  performHomeSleepClose('after-song');
+  return true;
+}
+function bindHomeSleepControls() {
+  ensureHomeClockTimer();
+  var inputEl = document.getElementById('home-sleep-minutes');
+  var waitEl = document.getElementById('home-sleep-after-song');
+  if (inputEl && !inputEl._mineradioSleepBound) {
+    inputEl._mineradioSleepBound = true;
+    inputEl.addEventListener('change', function(){
+      var minutes = Math.max(1, Math.min(720, Math.round(Number(inputEl.value) || 30)));
+      inputEl.value = String(minutes);
+      homeSleepState.minutes = minutes;
+      saveHomeSleepTimerState();
+    });
+  }
+  if (waitEl && !waitEl._mineradioSleepBound) {
+    waitEl._mineradioSleepBound = true;
+    waitEl.addEventListener('change', function(){
+      homeSleepState.waitCurrent = !!waitEl.checked;
+      saveHomeSleepTimerState();
+      updateHomeClockAndSleep();
+    });
+  }
+  var pop = document.getElementById('home-sleep-popover');
+  if (pop && !pop._mineradioSleepBound) {
+    pop._mineradioSleepBound = true;
+    pop.addEventListener('click', function(e){ e.stopPropagation(); });
+  }
+  if (!document._mineradioHomeSleepCloseBound) {
+    document._mineradioHomeSleepCloseBound = true;
+    document.addEventListener('click', function(e){
+      var target = e && e.target;
+      if (target && target.closest && target.closest('#home-sleep-popover,#home-sleep-icon,#home-sleep-countdown')) return;
+      closeHomeSleepPopover();
+    });
+    document.addEventListener('keydown', function(e){
+      if (e.key === 'Escape') closeHomeSleepPopover();
+    });
+  }
+}
+setTimeout(bindHomeSleepControls, 0);
 function compactHomeCount(n) {
   n = Number(n) || 0;
   if (n >= 100000000) return (n / 100000000).toFixed(1).replace(/\.0$/, '') + '亿';
@@ -16975,6 +17243,8 @@ function renderHomeTiles() {
 }
 function renderHomeDiscover() {
   initHomeCardCustomization();
+  bindHomeSleepControls();
+  updateHomeClockAndSleep();
   var sub = document.getElementById('home-subtitle');
   var loggedOutHome = !homeDiscoverState.loggedIn && !hasAnyPlatformLogin();
   var weather = homeWeatherRadioState.weather;
@@ -20016,6 +20286,7 @@ async function playQueueAt(idx, opts) {
     audio.src = proxyAudioUrl;
     updatePlaybackProgressUi();
     audio.onended = function(){
+      if (handleHomeSleepTrackEnded()) return;
       if (token !== trackSwitchToken) return;
       finalizeListenSession(true);
       if (playMode === 'single') setTimeout(function(){ playQueueAt(currentIdx, { autoRepeat: true }); }, 0);
