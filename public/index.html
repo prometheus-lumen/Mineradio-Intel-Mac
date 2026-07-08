@@ -329,7 +329,8 @@ body.home-wallpaper-preview #canvas-container{filter:none}
 .home-sleep-switch::before{content:'';position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,.82);box-shadow:0 4px 12px rgba(0,0,0,.28);transition:transform .18s,background .18s}
 .home-sleep-switch-row input:checked + .home-sleep-switch{background:color-mix(in srgb,var(--home-accent) 38%,rgba(255,255,255,.10));border-color:color-mix(in srgb,var(--home-accent) 52%,rgba(255,255,255,.14));box-shadow:0 0 20px color-mix(in srgb,var(--home-accent) 14%,transparent),inset 0 1px 4px rgba(0,0,0,.24)}
 .home-sleep-switch-row input:checked + .home-sleep-switch::before{transform:translateX(18px);background:#fff}
-.home-sleep-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.home-sleep-master-row{margin-top:0;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,.075);color:rgba(255,255,255,.80)}
+.home-sleep-actions{display:none;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
 .home-sleep-btn{height:31px;border:0;border-radius:12px;background:rgba(255,255,255,.070);color:rgba(255,255,255,.72);font-family:inherit;font-size:11px;font-weight:760;cursor:pointer;transition:background .18s,color .18s,transform .18s,box-shadow .18s}
 .home-sleep-btn.primary{background:color-mix(in srgb,var(--home-accent) 18%,rgba(255,255,255,.075));color:#fff;box-shadow:0 10px 26px color-mix(in srgb,var(--home-accent) 10%,transparent)}
 .home-sleep-btn:hover{background:rgba(255,255,255,.12);color:#fff;transform:translateY(-1px)}
@@ -2050,6 +2051,11 @@ html.control-glass-svg-ok #visual-guide-btn:hover{
                 <div class="home-sleep-pop-title">定时关闭</div>
                 <div class="home-sleep-status" id="home-sleep-status">未开启</div>
               </div>
+              <label class="home-sleep-switch-row home-sleep-master-row">
+                <span>定时关闭</span>
+                <input id="home-sleep-enabled" type="checkbox">
+                <span class="home-sleep-switch" aria-hidden="true"></span>
+              </label>
               <div class="home-sleep-row">
                 <div class="home-sleep-status">分钟</div>
                 <input class="home-sleep-input" id="home-sleep-minutes" type="number" min="1" max="720" step="1" value="30" aria-label="定时关闭分钟数">
@@ -2059,10 +2065,6 @@ html.control-glass-svg-ok #visual-guide-btn:hover{
                 <input id="home-sleep-after-song" type="checkbox">
                 <span class="home-sleep-switch" aria-hidden="true"></span>
               </label>
-              <div class="home-sleep-actions">
-                <button class="home-sleep-btn primary" type="button" onclick="startHomeSleepTimer()">开启</button>
-                <button class="home-sleep-btn" type="button" onclick="cancelHomeSleepTimer(true)">取消</button>
-              </div>
             </div>
           </div>
         </div>
@@ -16878,6 +16880,7 @@ function updateHomeClockAndSleep() {
   var statusEl = document.getElementById('home-sleep-status');
   var iconEl = document.getElementById('home-sleep-icon');
   var countdownEl = document.getElementById('home-sleep-countdown');
+  var enabledEl = document.getElementById('home-sleep-enabled');
   var inputEl = document.getElementById('home-sleep-minutes');
   var waitEl = document.getElementById('home-sleep-after-song');
   function setCountdownText(text, pending) {
@@ -16891,6 +16894,7 @@ function updateHomeClockAndSleep() {
   if (dateEl) dateEl.textContent = padHomeTime(now.getMonth() + 1) + '/' + padHomeTime(now.getDate());
   if (timeEl) timeEl.textContent = padHomeTime(now.getHours()) + ':' + padHomeTime(now.getMinutes());
   if (inputEl && document.activeElement !== inputEl) inputEl.value = String(homeSleepState.minutes || 30);
+  if (enabledEl) enabledEl.checked = !!homeSleepState.active || !!homeSleepState.pendingAfterSong;
   if (waitEl && document.activeElement !== waitEl) waitEl.checked = !!homeSleepState.waitCurrent;
   if (iconEl) iconEl.classList.toggle('active', !!homeSleepState.active || !!homeSleepState.pendingAfterSong);
   if (statusEl) statusEl.classList.toggle('active', !!homeSleepState.active || !!homeSleepState.pendingAfterSong);
@@ -16941,7 +16945,6 @@ function startHomeSleepTimer() {
   };
   saveHomeSleepTimerState();
   updateHomeClockAndSleep();
-  closeHomeSleepPopover();
   showToast('已开启定时关闭: ' + minutes + ' 分钟');
 }
 function cancelHomeSleepTimer(show) {
@@ -16950,8 +16953,11 @@ function cancelHomeSleepTimer(show) {
   homeSleepState.pendingAfterSong = false;
   saveHomeSleepTimerState();
   updateHomeClockAndSleep();
-  closeHomeSleepPopover();
   if (show) showToast('已取消定时关闭');
+}
+function setHomeSleepEnabled(enabled, show) {
+  if (enabled) startHomeSleepTimer();
+  else cancelHomeSleepTimer(show);
 }
 function toggleHomeSleepPopover(e) {
   if (e && e.stopPropagation) e.stopPropagation();
@@ -16985,20 +16991,31 @@ function handleHomeSleepTrackEnded() {
 }
 function bindHomeSleepControls() {
   ensureHomeClockTimer();
+  var enabledEl = document.getElementById('home-sleep-enabled');
   var inputEl = document.getElementById('home-sleep-minutes');
   var waitEl = document.getElementById('home-sleep-after-song');
+  if (enabledEl && !enabledEl._mineradioSleepBound) {
+    enabledEl._mineradioSleepBound = true;
+    enabledEl.addEventListener('change', function(e){
+      if (e && e.stopPropagation) e.stopPropagation();
+      setHomeSleepEnabled(!!enabledEl.checked, true);
+    });
+  }
   if (inputEl && !inputEl._mineradioSleepBound) {
     inputEl._mineradioSleepBound = true;
     inputEl.addEventListener('change', function(){
       var minutes = Math.max(1, Math.min(720, Math.round(Number(inputEl.value) || 30)));
       inputEl.value = String(minutes);
       homeSleepState.minutes = minutes;
+      if (homeSleepState.active) homeSleepState.endsAt = Date.now() + minutes * 60000;
       saveHomeSleepTimerState();
+      updateHomeClockAndSleep();
     });
   }
   if (waitEl && !waitEl._mineradioSleepBound) {
     waitEl._mineradioSleepBound = true;
-    waitEl.addEventListener('change', function(){
+    waitEl.addEventListener('change', function(e){
+      if (e && e.stopPropagation) e.stopPropagation();
       homeSleepState.waitCurrent = !!waitEl.checked;
       saveHomeSleepTimerState();
       updateHomeClockAndSleep();
@@ -17007,13 +17024,14 @@ function bindHomeSleepControls() {
   var pop = document.getElementById('home-sleep-popover');
   if (pop && !pop._mineradioSleepBound) {
     pop._mineradioSleepBound = true;
+    pop.addEventListener('pointerdown', function(e){ e.stopPropagation(); });
     pop.addEventListener('click', function(e){ e.stopPropagation(); });
   }
   if (!document._mineradioHomeSleepCloseBound) {
     document._mineradioHomeSleepCloseBound = true;
     document.addEventListener('click', function(e){
       var target = e && e.target;
-      if (target && target.closest && target.closest('#home-sleep-popover,#home-sleep-icon,#home-sleep-countdown')) return;
+      if (target && target.closest && target.closest('.home-sleep-trigger-wrap')) return;
       closeHomeSleepPopover();
     });
     document.addEventListener('keydown', function(e){
@@ -17953,6 +17971,7 @@ function isPointNearHomeContent(x, y) {
     '.home-card',
     '.home-tile',
     '.home-chip',
+    '.home-sleep-trigger-wrap',
     '.home-card-menu',
     '.home-restore-pop',
     '.home-grid-restore'
@@ -17983,6 +18002,7 @@ function isHomeBlankDismissClick(e) {
     '#top-right',
     '#bottom-bar',
     '#bottom-handle',
+    '.home-sleep-trigger-wrap',
     '#fx-fab',
     '#fx-fab-hide-btn',
     '#fx-panel',
