@@ -50,6 +50,7 @@ const fs   = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const tls = require('tls');
+const os = require('os');
 const { once } = require('events');
 const { fileURLToPath } = require('url');
 const { analyzePodcastDjStream, analyzePodcastDjIntro } = require('./dj-analyzer');
@@ -62,7 +63,15 @@ const QQ_COOKIE_FILE = process.env.QQ_COOKIE_FILE || path.join(__dirname, '.qq-c
 const UPDATE_WORK_DIR = process.env.MINERADIO_UPDATE_DIR || path.join(__dirname, 'updates');
 const UPDATE_DOWNLOAD_DIR = process.env.MINERADIO_UPDATE_DOWNLOAD_DIR || path.join(UPDATE_WORK_DIR, 'downloads');
 const UPDATE_PATCH_BACKUP_DIR = process.env.MINERADIO_PATCH_BACKUP_DIR || path.join(UPDATE_WORK_DIR, 'backups', 'patches');
-const BEATMAP_CACHE_DIR = process.env.MINERADIO_BEAT_CACHE_DIR || 'D:\\MineradioCache\\beatmaps';
+function defaultBeatMapCacheDir() {
+  if (process.platform === 'win32') return 'D:\\MineradioCache\\beatmaps';
+  const home = os.homedir && os.homedir();
+  if (process.platform === 'darwin') {
+    return path.join(home || os.tmpdir(), 'Library', 'Caches', 'Mineradio', 'beatmaps');
+  }
+  return path.join(process.env.XDG_CACHE_HOME || path.join(home || os.tmpdir(), '.cache'), 'Mineradio', 'beatmaps');
+}
+const BEATMAP_CACHE_DIR = String(process.env.MINERADIO_BEAT_CACHE_DIR || '').trim() || defaultBeatMapCacheDir();
 const APP_PACKAGE = readPackageInfo();
 const APP_VERSION = process.env.MINERADIO_VERSION || APP_PACKAGE.version || '0.9.11';
 const UPDATE_CONFIG = readUpdateConfig(APP_PACKAGE);
@@ -505,36 +514,51 @@ async function fetchManifestUpdateInfo(ref) {
   }
 }
 function beatCacheRootInfo() {
-  const dir = path.resolve(BEATMAP_CACHE_DIR);
+  const configured = String(BEATMAP_CACHE_DIR || '').trim();
+  const windowsDrivePathOnPosix = process.platform !== 'win32' && /^[a-z]:[\\\/]/i.test(configured);
+  const relativePathOnPosix = process.platform !== 'win32' && !path.isAbsolute(configured);
+  const dir = windowsDrivePathOnPosix ? configured : path.resolve(configured);
   const root = path.parse(dir).root;
   const drive = root ? root.replace(/[\\\/]+$/, '').toUpperCase() : '';
-  const allowed = !!root && !/^C:$/i.test(drive);
+  const insideAppDir = process.platform !== 'win32' && path.isAbsolute(dir) && (() => {
+    const rel = path.relative(__dirname, dir);
+    return rel === '' || (!!rel && !rel.startsWith('..') && !path.isAbsolute(rel));
+  })();
+  const allowed = process.platform === 'win32'
+    ? (!!root && !/^C:$/i.test(drive))
+    : (!!root && !windowsDrivePathOnPosix && !relativePathOnPosix && !insideAppDir);
   const available = allowed && fs.existsSync(root);
-  return { dir, root, drive, allowed, available };
+  const reason = !allowed
+    ? (windowsDrivePathOnPosix ? 'WINDOWS_CACHE_PATH_ON_POSIX_DISABLED'
+      : (relativePathOnPosix ? 'RELATIVE_CACHE_PATH_DISABLED'
+        : (insideAppDir ? 'APP_DIR_CACHE_DISABLED' : 'C_DRIVE_DISABLED')))
+    : (!available ? 'TARGET_ROOT_UNAVAILABLE' : '');
+  return { dir, root, drive, allowed, available, reason };
 }
-function ensureBeatMapCacheDir() {
+function ensureBeatMapCacheDir(create) {
   const info = beatCacheRootInfo();
   if (!info.allowed) {
-    const err = new Error('BEAT_CACHE_ON_C_DRIVE_DISABLED');
-    err.code = 'BEAT_CACHE_ON_C_DRIVE_DISABLED';
+    const err = new Error(info.reason || 'BEAT_CACHE_PATH_DISABLED');
+    err.code = info.reason || 'BEAT_CACHE_PATH_DISABLED';
     err.info = info;
     throw err;
   }
   if (!info.available) {
-    const err = new Error('BEAT_CACHE_DRIVE_UNAVAILABLE');
-    err.code = 'BEAT_CACHE_DRIVE_UNAVAILABLE';
+    const err = new Error(info.reason || 'BEAT_CACHE_ROOT_UNAVAILABLE');
+    err.code = info.reason || 'BEAT_CACHE_ROOT_UNAVAILABLE';
     err.info = info;
     throw err;
   }
-  fs.mkdirSync(info.dir, { recursive: true });
+  if (create !== false) fs.mkdirSync(info.dir, { recursive: true });
   return info.dir;
 }
-function safeBeatMapCacheFile(key) {
+function safeBeatMapCacheFile(key, opts) {
   const raw = String(key || '').trim();
   if (!raw || raw.length > 240) return null;
   const hash = crypto.createHash('sha1').update(raw).digest('hex');
   const label = raw.replace(/[^a-z0-9_.-]+/gi, '_').replace(/^_+|_+$/g, '').slice(0, 48) || 'beatmap';
-  return path.join(ensureBeatMapCacheDir(), `${label}-${hash}.json`);
+  const dir = ensureBeatMapCacheDir(!(opts && opts.create === false));
+  return path.join(dir, `${label}-${hash}.json`);
 }
 function compactBeatMapCachePayload(body) {
   const key = String(body && body.key || '').trim();
@@ -554,7 +578,7 @@ function compactBeatMapCachePayload(body) {
   };
 }
 function readBeatMapCache(key) {
-  const file = safeBeatMapCacheFile(key);
+  const file = safeBeatMapCacheFile(key, { create: false });
   if (!file || !fs.existsSync(file)) return null;
   const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
   return raw && raw.map ? raw : null;
@@ -3321,7 +3345,7 @@ const server = http.createServer(async (req, res) => {
       enabled: info.allowed && info.available,
       dir: info.dir,
       drive: info.drive,
-      reason: !info.allowed ? 'C_DRIVE_DISABLED' : (!info.available ? 'TARGET_DRIVE_UNAVAILABLE' : ''),
+      reason: info.reason || '',
       mode: info.allowed && info.available ? 'disk' : 'memory-only',
     });
     return;

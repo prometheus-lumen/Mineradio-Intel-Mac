@@ -5965,7 +5965,7 @@ function makeParticleClockTexture() {
   tex.generateMipmaps = false;
   tex.wrapS = THREE.ClampToEdgeWrapping;
   tex.wrapT = THREE.ClampToEdgeWrapping;
-  tex.userData = { canvas: cv, lastText: '' };
+  tex.userData = { canvas: cv, lastText: '', lastSecond: -1 };
   updateParticleClockTexture(tex, true);
   return tex;
 }
@@ -5975,7 +5975,10 @@ function particleClockPad(n) {
 }
 function updateParticleClockTexture(tex, force) {
   if (!tex || !tex.userData || !tex.userData.canvas) return;
-  var now = new Date();
+  var second = Math.floor(Date.now() / 1000);
+  if (!force && tex.userData.lastSecond === second) return;
+  tex.userData.lastSecond = second;
+  var now = new Date(second * 1000);
   var text = particleClockPad(now.getHours()) + ':' + particleClockPad(now.getMinutes()) + ':' + particleClockPad(now.getSeconds());
   if (!force && tex.userData.lastText === text) return;
   tex.userData.lastText = text;
@@ -11268,7 +11271,7 @@ function scheduleBeatAnalysis(songId, audioUrl, token, song) {
       if (token !== beatMapToken || !audio || audio.paused || beatMapCache[songId]) return;
       var diskMap = await readBeatDiskCache(songId);
       if (diskMap) {
-        applyBeatMapCacheForCurrent(songId, diskMap, token, 'D盘节拍缓存命中:');
+        applyBeatMapCacheForCurrent(songId, diskMap, token, '磁盘节拍缓存命中:');
         return;
       }
       if (token !== beatMapToken || !audio || audio.paused || beatMapCache[songId]) return;
@@ -11319,6 +11322,29 @@ function updateBeatDiskCacheStatus(data) {
     beatDiskCacheNoticeLogged = true;
     console.log('节拍磁盘缓存不可用，已降级为本次运行内存缓存:', beatDiskCacheStatus.reason || 'unknown');
   }
+}
+
+function beatPrefetchLimitForCurrentLoad() {
+  var quality = normalizePerformanceQuality(fx && fx.performanceQuality);
+  if (quality === 'eco') return 0;
+  if (quality === 'balanced') return 1;
+  var interacting = typeof isRenderInteractionActive === 'function' && isRenderInteractionActive();
+  if (fx && fx.preset === PARTICLE_CLOCK_PRESET_INDEX && !interacting) return 1;
+  return BEAT_PREFETCH_LIMIT;
+}
+
+function beatPrefetchDelayForCurrentLoad(delayMs) {
+  var waitMs = delayMs == null ? 1800 : delayMs;
+  var quality = normalizePerformanceQuality(fx && fx.performanceQuality);
+  var interacting = typeof isRenderInteractionActive === 'function' && isRenderInteractionActive();
+  if (quality === 'eco') return Math.max(waitMs, 9000);
+  if (quality === 'balanced') waitMs = Math.max(waitMs, 5200);
+  if (fx && fx.preset === PARTICLE_CLOCK_PRESET_INDEX && !interacting) waitMs = Math.max(waitMs, 6500);
+  var tier = (typeof getRenderLoadTier === 'function') ? getRenderLoadTier() : 0;
+  if (tier >= 2) waitMs = Math.max(waitMs, 6200);
+  else if (tier >= 1) waitMs = Math.max(waitMs, 4200);
+  if (interacting) waitMs = Math.max(waitMs, 2400);
+  return waitMs;
 }
 
 async function ensureBeatDiskCacheStatus() {
@@ -11423,12 +11449,12 @@ function scheduleQueueBeatPrefetch(fromIdx, delayMs, state) {
   cancelBeatPrefetchTimer();
   if (!playQueue.length || beatPrefetchBusy || localBeatAnalysis.active) return;
   var prefetchState = normalizeBeatPrefetchState(state);
-  if (prefetchState.count >= BEAT_PREFETCH_LIMIT) return;
+  var prefetchLimit = beatPrefetchLimitForCurrentLoad();
+  if (prefetchLimit <= 0 || prefetchState.count >= prefetchLimit) return;
   var token = beatMapToken;
   var seq = ++beatPrefetchToken;
   var startIdx = isFinite(fromIdx) ? fromIdx : currentIdx;
-  var waitMs = delayMs == null ? 1800 : delayMs;
-  if (typeof isRenderInteractionActive === 'function' && isRenderInteractionActive()) waitMs = Math.max(waitMs, 2200);
+  var waitMs = beatPrefetchDelayForCurrentLoad(delayMs);
   beatPrefetchTimer = setTimeout(function(){
     beatPrefetchTimer = null;
     runQueueBeatPrefetch(startIdx, token, seq, prefetchState);
@@ -11439,7 +11465,8 @@ async function runQueueBeatPrefetch(fromIdx, token, seq, state) {
   if (token !== beatMapToken || seq !== beatPrefetchToken || beatPrefetchBusy || !playQueue.length) return;
   if (audio && audio.paused) return;
   state = normalizeBeatPrefetchState(state);
-  if (state.count >= BEAT_PREFETCH_LIMIT) return;
+  var prefetchLimit = beatPrefetchLimitForCurrentLoad();
+  if (prefetchLimit <= 0 || state.count >= prefetchLimit) return;
   var idx = findNextBeatPrefetchIndex(fromIdx, state.keys);
   if (idx < 0) return;
   var song = hydrateCustomCover(playQueue[idx]);
@@ -11453,7 +11480,7 @@ async function runQueueBeatPrefetch(fromIdx, token, seq, state) {
     if (token !== beatMapToken || seq !== beatPrefetchToken) return;
     var diskMap = await readBeatDiskCache(key);
     if (diskMap) {
-      console.log('队列节奏D盘缓存命中:', song.name || key, diskMap.visualBeatCount || 0);
+      console.log('队列节奏磁盘缓存命中:', song.name || key, diskMap.visualBeatCount || 0);
       return;
     }
     var audioUrl = await fetchBeatPrefetchAudioUrl(song);
@@ -11479,8 +11506,8 @@ async function runQueueBeatPrefetch(fromIdx, token, seq, state) {
     console.warn('queue beat prefetch failed:', err && err.message ? err.message : err);
   } finally {
     beatPrefetchBusy = false;
-    if (state.count < BEAT_PREFETCH_LIMIT && token === beatMapToken && seq === beatPrefetchToken && playQueue.length && !(audio && audio.paused)) {
-      scheduleQueueBeatPrefetch(idx, 1600, state);
+    if (state.count < beatPrefetchLimitForCurrentLoad() && token === beatMapToken && seq === beatPrefetchToken && playQueue.length && !(audio && audio.paused)) {
+      scheduleQueueBeatPrefetch(idx, 2600, state);
     }
   }
 }
@@ -20712,7 +20739,7 @@ async function playQueueAt(idx, opts) {
         applyCinemaProfileFromBeatMap(currentBeatMap);
         syncBeatMapPlaybackCursor(audio ? audio.currentTime : 0);
         notifyDesktopLyricsBeatMapReady();
-        console.log('beatmap D盘缓存命中:', currentBeatMap.kicks.length, '个鼓点');
+        console.log('beatmap 磁盘缓存命中:', currentBeatMap.kicks.length, '个鼓点');
         scheduleQueueBeatPrefetch(idx, 2600);
       } else {
         // 后台延迟分析, 避免新歌刚开始播放时抢占解码和渲染资源
@@ -29086,8 +29113,20 @@ function wakeAnimationLoop() {
   }
   scheduleAnimationLoop();
 }
+function getParticleClockIdleRenderFps() {
+  if (!(fx && fx.preset === PARTICLE_CLOCK_PRESET_INDEX)) return 0;
+  if (typeof isRenderInteractionActive === 'function' && isRenderInteractionActive()) return 0;
+  if (presetTransition && presetTransition.active) return 48;
+  var quality = normalizePerformanceQuality(fx && fx.performanceQuality);
+  if (quality === 'eco') return 24;
+  if (quality === 'balanced') return 30;
+  if (quality === 'ultra') return 48;
+  return 36;
+}
 function getAdaptiveRenderFps() {
   if (isDeepBackgroundMode()) return 1;
+  var clockFps = getParticleClockIdleRenderFps();
+  if (clockFps) return clockFps;
   if (RENDER_VISIBLE_VSYNC) return 0;
   var tier = (typeof getRenderLoadTier === 'function') ? getRenderLoadTier() : 0;
   if (typeof isRenderInteractionActive === 'function' && isRenderInteractionActive()) {
