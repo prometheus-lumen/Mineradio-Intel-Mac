@@ -26024,6 +26024,7 @@ function toggleFullscreen() {
   if (!api || !api.isDesktop) return;
 
   document.documentElement.classList.add('desktop-shell-root');
+  document.documentElement.classList.toggle('desktop-native-mac-controls-root', api.platform === 'darwin');
   document.body.classList.add('desktop-shell');
   document.body.classList.toggle('desktop-mac', api.platform === 'darwin');
   document.body.classList.toggle('desktop-native-mac-controls', api.platform === 'darwin');
