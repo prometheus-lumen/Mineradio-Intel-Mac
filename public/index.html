@@ -1204,6 +1204,9 @@ body.desktop-shell.diy-mode #bottom-bar.stage-mode{left:50%;width:min(1080px,cal
 .preset-card[data-preset="7"] .pc-icon{color:#ffd987}
 .preset-card[data-preset="7"].active{border-color:rgba(255,217,135,.60);box-shadow:0 0 0 1px rgba(255,217,135,.24),0 18px 52px rgba(255,176,72,.090),inset 0 1px 0 rgba(255,255,255,.18)}
 .preset-card[data-preset="7"].active .pc-icon{color:#ffd987!important;text-shadow:0 0 14px rgba(255,217,135,.62),0 0 28px rgba(73,220,255,.22)}
+.preset-card[data-preset="8"] .pc-icon{color:#d8f5ff}
+.preset-card[data-preset="8"].active{border-color:rgba(216,245,255,.58);box-shadow:0 0 0 1px rgba(216,245,255,.22),0 18px 52px rgba(120,210,255,.10),inset 0 1px 0 rgba(255,255,255,.18)}
+.preset-card[data-preset="8"].active .pc-icon{color:#f4fdff!important;text-shadow:0 0 14px rgba(216,245,255,.66),0 0 30px rgba(95,180,255,.24)}
 .preset-card .pc-bg{position:absolute;inset:0;opacity:.35;pointer-events:none}
 @keyframes preset-card-pulse{0%{opacity:0;transform:scale(.6) rotate(0deg)}35%{opacity:1}100%{opacity:0;transform:scale(1.25) rotate(12deg)}}
 .user-archive-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:0 0 12px}
@@ -2931,7 +2934,7 @@ var CUSTOM_LYRIC_STORE_KEY = 'mineradio-custom-lyrics-v1';
 var CUSTOM_LYRIC_PREF_STORE_KEY = 'mineradio-custom-lyric-prefs-v1';
 var LYRIC_LAYOUT_STORE_KEY = 'mineradio-lyric-layout-v1';
 var VISUAL_PRESET_SCHEMA = 'laser-preset-v1';
-var VISUAL_PRESET_MAX_INDEX = 7;
+var VISUAL_PRESET_MAX_INDEX = 8;
 var PLAYBACK_QUALITY_STORE_KEY = 'mineradio-playback-quality-v1';
 var UPLOAD_TIP_STORE_KEY = 'mineradio-upload-tip-seen';
 var DIY_MODE_STORE_KEY = 'mineradio-diy-player-mode-v1';
@@ -3424,7 +3427,7 @@ function maybeAnnounceDjMode() {
 
 // fx 状态: 预设 + 主滑块 + 开关 + 三态
 var fxDefaults = {
-  preset: 0,            // 0=emily cover, 1=tunnel, 2=orbit, 3=void, 4=vinyl, 5=wallpaper, 6=skull, 7=hexagram
+  preset: 0,            // 0=emily cover, 1=tunnel, 2=orbit, 3=void, 4=vinyl, 5=wallpaper, 6=skull, 7=hexagram, 8=particle clock
   intensity: 0.85,
   cinemaShake: 0.5,
   depth: 1.0,
@@ -5952,6 +5955,55 @@ function makeLaserDotTexture() {
 }
 var laserDotTexture = makeLaserDotTexture();
 
+function makeParticleClockTexture() {
+  var cv = document.createElement('canvas');
+  cv.width = 1024;
+  cv.height = 256;
+  var tex = new THREE.CanvasTexture(cv);
+  tex.minFilter = THREE.LinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+  tex.generateMipmaps = false;
+  tex.wrapS = THREE.ClampToEdgeWrapping;
+  tex.wrapT = THREE.ClampToEdgeWrapping;
+  tex.userData = { canvas: cv, lastText: '' };
+  updateParticleClockTexture(tex, true);
+  return tex;
+}
+function particleClockPad(n) {
+  n = Math.floor(Number(n) || 0);
+  return n < 10 ? '0' + n : String(n);
+}
+function updateParticleClockTexture(tex, force) {
+  if (!tex || !tex.userData || !tex.userData.canvas) return;
+  var now = new Date();
+  var text = particleClockPad(now.getHours()) + ':' + particleClockPad(now.getMinutes()) + ':' + particleClockPad(now.getSeconds());
+  if (!force && tex.userData.lastText === text) return;
+  tex.userData.lastText = text;
+  var cv = tex.userData.canvas;
+  var ctx = cv.getContext('2d');
+  var W = cv.width, H = cv.height;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, W, H);
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = '900 168px "JetBrains Mono","SF Mono","Menlo","Consolas",monospace';
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  ctx.shadowColor = 'rgba(220,245,255,0.78)';
+  ctx.shadowBlur = 28;
+  ctx.strokeStyle = 'rgba(255,255,255,0.66)';
+  ctx.lineWidth = 7;
+  ctx.strokeText(text, W / 2, H / 2 + 2);
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#fff';
+  ctx.fillText(text, W / 2, H / 2 + 2);
+  ctx.restore();
+  tex.needsUpdate = true;
+}
+var particleClockTex = makeParticleClockTexture();
+
 // ============================================================
 //  主粒子系统
 //   - 5 个 preset, 每个预设走完全不同的 pos 计算
@@ -6092,6 +6144,7 @@ var uniforms = {
   uColorMixT:  { value: 1.0 },        // 0=显示旧封面 → 1=显示新封面
   uEdgeTex:    { value: coverEdgeTex },
   uRippleTex:  { value: rippleTex },
+  uClockTex:   { value: particleClockTex },
   uRippleCount:{ value: 0 },
   uDotTex:     { value: dotTexture },
   uHasCover:   { value: 0 },
@@ -6122,7 +6175,7 @@ uniform float uVinylSpin;
 uniform float uColorBoost, uScatter, uCoverRes, uBgFade;
 uniform float uHasCover, uHasDepth, uEdgeEnabled, uAiBoost;
 uniform float uMouseActive, uPixel, uColorMixT, uLoading;
-uniform sampler2D uCoverTex, uPrevCoverTex, uEdgeTex, uRippleTex;
+uniform sampler2D uCoverTex, uPrevCoverTex, uEdgeTex, uRippleTex, uClockTex;
 uniform int uRippleCount;
 uniform vec2 uMouseXY, uHandXY;
 uniform float uHandActive, uGestureGrip;
@@ -6385,6 +6438,53 @@ void main(){
       pos.z = groove * 0.010 * grooveGuard + border * 0.024 * depthGuard + bassDrive * vinylN * 0.016 * K * beatGuard + tick * highDrive * 0.010 * grooveGuard;
       maxRippleAmp = max(maxRippleAmp, border * 0.32 + outerRim * 0.12 + bassDrive * vinylN * 0.11 * beatGuard + tick * highDrive * 0.10 * grooveGuard + uBeat * vinylN * 0.08 * beatGuard);
     }
+  }
+
+  // ====================================================
+  //  Preset 8: PARTICLE CLOCK — 秒级粒子时钟
+  //  Canvas mask drives the digits; spare particles remain as fine star dust.
+  // ====================================================
+  else if (uPreset > 7.5) {
+    float seed = hash11(aRand * 1777.0 + floor(aUv.x * 240.0) + floor(aUv.y * 180.0) * 3.1);
+    float mask = texture2D(uClockTex, vec2(aUv.x, aUv.y)).r;
+    float digit = smoothstep(0.035, 0.74, mask);
+    float clockEdge = smoothstep(0.03, 0.18, mask) * (1.0 - smoothstep(0.78, 1.0, mask));
+    float digitTwinkle = pow(0.5 + 0.5 * sin(t * (0.64 + seed * 0.82) + aRand * 16.0), 7.0);
+    float dustTwinkle = pow(0.5 + 0.5 * sin(t * (0.38 + seed * 0.70) + aRand * 23.0), 6.0);
+    float breath = sin(t * 0.52) * 0.5 + 0.5;
+
+    vec3 textPos = vec3(
+      (aUv.x - 0.5) * 10.15 + (seed - 0.5) * 0.022,
+      (aUv.y - 0.5) * 2.74 + (hash11(aRand * 43.0) - 0.5) * 0.018,
+      0.18 + clockEdge * 0.16 + digitTwinkle * 0.040 + breath * 0.018
+    );
+    textPos.x += sin(t * 0.18 + seed * 6.28) * 0.010;
+    textPos.y += cos(t * 0.15 + seed * 5.31) * 0.008;
+
+    float dustAngle = seed * PI * 2.0 + t * (0.010 + seed * 0.018);
+    float dustRadius = mix(1.2, 12.4, pow(hash11(aRand * 307.0 + 5.0), 0.58));
+    vec3 dustPos = vec3(
+      cos(dustAngle) * dustRadius + (aUv.x - 0.5) * 9.2,
+      sin(dustAngle * 0.78 + seed * 4.4) * dustRadius * 0.50 + (hash11(aRand * 79.0) - 0.5) * 4.2,
+      mix(-15.5, 6.8, hash11(aRand * 601.0)) + sin(t * (0.05 + seed * 0.05) + seed * 9.0) * 0.38
+    );
+    pos = mix(dustPos, textPos, digit);
+
+    vec3 ice = vec3(0.70, 0.92, 1.00);
+    vec3 whiteHot = vec3(0.96, 1.00, 1.00);
+    vec3 blueMist = vec3(0.34, 0.62, 0.88);
+    vec3 coverClock = mix(ice, coverColor, clamp(uHasCover, 0.0, 1.0));
+    float coverLum = dot(coverClock, vec3(0.299, 0.587, 0.114));
+    coverClock = mix(coverClock, whiteHot, clamp(0.28 - coverLum, 0.0, 0.28) * 1.65);
+    coverClock = mix(coverClock, uTintColor, clamp(uTintStrength, 0.0, 1.0) * 0.50);
+    vec3 dustCol = mix(blueMist, coverClock, 0.50 + seed * 0.30);
+    dustCol = mix(dustCol, whiteHot, dustTwinkle * 0.32);
+    vec3 digitCol = mix(coverClock, whiteHot, 0.34 + mask * 0.42 + digitTwinkle * 0.16);
+    digitCol = mix(digitCol, coverClock * 1.28 + vec3(0.05), clockEdge * 0.30);
+    vColor = mix(dustCol, digitCol, digit);
+    vAlpha = mix(0.022 + dustTwinkle * 0.18, 0.34 + mask * 0.78 + clockEdge * 0.18 + digitTwinkle * 0.08, digit);
+    vAlpha *= 0.86 + breath * 0.10;
+    maxRippleAmp = max(maxRippleAmp, digit * (0.16 + clockEdge * 0.32 + digitTwinkle * 0.10) + dustTwinkle * 0.040);
   }
 
   // ====================================================
@@ -7151,6 +7251,7 @@ function updateLaserBeamLayer(dt) {
 //  主粒子负责点阵密度, 这里补顶点星芒、同心轨迹和外圈波纹。
 // ============================================================
 var HEXAGRAM_PRESET_INDEX = 7;
+var PARTICLE_CLOCK_PRESET_INDEX = 8;
 var hexagramGroup = new THREE.Group();
 var hexagramOpacity = 0;
 var hexagramGold = new THREE.Color('#ffd987');
@@ -17981,8 +18082,9 @@ function switchPlaybackVisualToEmily() {
 function applyStartupStarfieldPreset() {
   if (playing || currentIdx >= 0) return;
   startupVisualPreviewActive = true;
-  if (typeof setPreset === 'function' && fx.preset !== 5) {
-    setPreset(5, { silent: true, preserveCamera: false, skipTransition: true, noSave: true });
+  var idlePreset = playbackVisualPreset === PARTICLE_CLOCK_PRESET_INDEX ? PARTICLE_CLOCK_PRESET_INDEX : 5;
+  if (typeof setPreset === 'function' && fx.preset !== idlePreset) {
+    setPreset(idlePreset, { silent: true, preserveCamera: false, skipTransition: true, noSave: true });
   } else if (typeof syncFxUniforms === 'function') {
     syncFxUniforms();
   }
@@ -22172,6 +22274,7 @@ var presetMeta = [
   { name: '星河', desc: '壁纸粒子 · 音乐律动' },
   { name: '安魂', desc: '骷髅·YUI7W', descHtml: '骷髅·<span class="pc-yui7w">YUI7W</span>' },
   { name: '六芒星', desc: '金青星阵 · 环形轨迹' },
+  { name: '粒子时钟', desc: '星尘时间 · 精确到秒' },
 ];
 var presetIcons = [
   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 14c3-2 5-2 8 0s5 2 8 0M3 10c3-2 5-2 8 0s5 2 8 0M3 18c3-2 5-2 8 0s5 2 8 0"/></svg>',
@@ -22182,8 +22285,9 @@ var presetIcons = [
   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 15c2.2-4.4 4.4-4.4 6.6 0s4.4 4.4 6.6 0S20.6 10.6 23 15"/><path d="M3 9c2.2 2.2 4.4 2.2 6.6 0s4.4-2.2 6.6 0S20.6 11.2 23 9"/><circle cx="12" cy="12" r="1.7" fill="currentColor"/></svg>',
   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.2h4v6.2h4.2v3.8H14v7.6h-4v-7.6H5.8V9.4H10z"/></svg>',
   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.2 19.4 16H4.6L12 3.2Z"/><path d="M12 20.8 4.6 8h14.8L12 20.8Z"/><circle cx="12" cy="12" r="1.45" fill="currentColor" stroke="none"/></svg>',
+  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.2"/><path d="M12 7.2v5.2l3.4 2.1"/><path d="M5.8 4.8 4.2 3.2"/><path d="M18.2 4.8l1.6-1.6"/></svg>',
 ];
-var presetDisplayOrder = [0, 7, 6, 5, 4, 2, 1, 3];
+var presetDisplayOrder = [0, 8, 7, 6, 5, 4, 2, 1, 3];
 var lyricColorPresets = [
   { name:'雾蓝', color:'#a9b8c8' },
   { name:'银蓝', color:'#9db8cf' },
@@ -23318,14 +23422,15 @@ function refreshPresetGrid() {
 function triggerPresetParticleTransition(fromPreset, toPreset) {
   presetTransition.active = true;
   presetTransition.start = uniforms.uTime.value;
-  presetTransition.duration = toPreset === 5 ? 0.30 : (toPreset === HEXAGRAM_PRESET_INDEX ? 0.42 : 0.24);
+  presetTransition.duration = toPreset === 5 ? 0.30 : (toPreset === HEXAGRAM_PRESET_INDEX || toPreset === PARTICLE_CLOCK_PRESET_INDEX ? 0.42 : 0.24);
   presetTransition.from = fromPreset;
   presetTransition.to = toPreset;
   var newVisual = toPreset >= 4;
-  var wallpaperFlow = toPreset === 5 || toPreset === HEXAGRAM_PRESET_INDEX;
-  uniforms.uScatter.value = Math.max(uniforms.uScatter.value, fx.scatter + (newVisual ? (toPreset === HEXAGRAM_PRESET_INDEX ? 0.006 : (wallpaperFlow ? 0.008 : 0.024)) : 0.12));
-  uniforms.uBurstAmt.value = Math.max(uniforms.uBurstAmt.value, toPreset === HEXAGRAM_PRESET_INDEX ? 0.20 : (wallpaperFlow ? 0.05 : 0.15));
-  camPunch = Math.max(camPunch, toPreset === HEXAGRAM_PRESET_INDEX ? 0.10 : (wallpaperFlow ? 0.04 : 0.12));
+  var wallpaperFlow = toPreset === 5 || toPreset === HEXAGRAM_PRESET_INDEX || toPreset === PARTICLE_CLOCK_PRESET_INDEX;
+  var clockFlow = toPreset === PARTICLE_CLOCK_PRESET_INDEX;
+  uniforms.uScatter.value = Math.max(uniforms.uScatter.value, fx.scatter + (newVisual ? (toPreset === HEXAGRAM_PRESET_INDEX ? 0.006 : (clockFlow ? 0.004 : (wallpaperFlow ? 0.008 : 0.024))) : 0.12));
+  uniforms.uBurstAmt.value = Math.max(uniforms.uBurstAmt.value, toPreset === HEXAGRAM_PRESET_INDEX ? 0.20 : (clockFlow ? 0.12 : (wallpaperFlow ? 0.05 : 0.15)));
+  camPunch = Math.max(camPunch, toPreset === HEXAGRAM_PRESET_INDEX ? 0.10 : (clockFlow ? 0.035 : (wallpaperFlow ? 0.04 : 0.12)));
   for (var i = 0; i < 3; i++) {
     triggerRipple((Math.random() - 0.5) * 3.4, (Math.random() - 0.5) * 3.4, 0.58 + Math.random() * 0.32);
   }
@@ -23343,10 +23448,11 @@ function tickPresetTransition() {
   var t = Math.max(0, Math.min(1, raw));
   var wave = Math.sin(t * Math.PI);
   var newVisual = presetTransition.to >= 4;
-  var wallpaperFlow = presetTransition.to === 5 || presetTransition.to === HEXAGRAM_PRESET_INDEX;
-  uniforms.uScatter.value = Math.max(uniforms.uScatter.value, fx.scatter + wave * (newVisual ? (presetTransition.to === HEXAGRAM_PRESET_INDEX ? 0.010 : (wallpaperFlow ? 0.008 : 0.026)) : 0.16));
-  uniforms.uBurstAmt.value = Math.max(uniforms.uBurstAmt.value, wave * (presetTransition.to === HEXAGRAM_PRESET_INDEX ? 0.20 : (wallpaperFlow ? 0.045 : (newVisual ? 0.12 : 0.15))));
-  uniforms.uPointScale.value = fx.point * (1 + wave * (presetTransition.to === HEXAGRAM_PRESET_INDEX ? 0.032 : (wallpaperFlow ? 0.016 : 0.048)));
+  var wallpaperFlow = presetTransition.to === 5 || presetTransition.to === HEXAGRAM_PRESET_INDEX || presetTransition.to === PARTICLE_CLOCK_PRESET_INDEX;
+  var clockFlow = presetTransition.to === PARTICLE_CLOCK_PRESET_INDEX;
+  uniforms.uScatter.value = Math.max(uniforms.uScatter.value, fx.scatter + wave * (newVisual ? (presetTransition.to === HEXAGRAM_PRESET_INDEX ? 0.010 : (clockFlow ? 0.005 : (wallpaperFlow ? 0.008 : 0.026))) : 0.16));
+  uniforms.uBurstAmt.value = Math.max(uniforms.uBurstAmt.value, wave * (presetTransition.to === HEXAGRAM_PRESET_INDEX ? 0.20 : (clockFlow ? 0.11 : (wallpaperFlow ? 0.045 : (newVisual ? 0.12 : 0.15)))));
+  uniforms.uPointScale.value = fx.point * (1 + wave * (presetTransition.to === HEXAGRAM_PRESET_INDEX ? 0.032 : (clockFlow ? 0.012 : (wallpaperFlow ? 0.016 : 0.048))));
   if (raw >= 1) {
     presetTransition.active = false;
     syncFxUniforms();
@@ -23372,6 +23478,7 @@ function setPreset(p, opts) {
     else if (p === 5) { orbit.userRadius = 9.4; orbit.userPhi = 0.34; orbit.userTheta = -0.52; orbit.baselineRadius = 9.4; orbit.baselinePhi = 0.34; }
     else if (p === 6) { orbit.userRadius = 7.4; orbit.userPhi = 0.10; orbit.userTheta = 0.18; orbit.baselineRadius = 7.4; orbit.baselinePhi = 0.10; }
     else if (p === HEXAGRAM_PRESET_INDEX) { orbit.userRadius = 7.6; orbit.userPhi = 0.08; orbit.userTheta = 0.0; orbit.baselineRadius = 7.6; orbit.baselinePhi = 0.08; }
+    else if (p === PARTICLE_CLOCK_PRESET_INDEX) { orbit.userRadius = 7.6; orbit.userPhi = 0.02; orbit.userTheta = 0.0; orbit.baselineRadius = 7.6; orbit.baselinePhi = 0.02; }
     else              { orbit.userRadius = 6.6; orbit.userPhi = 0.08; orbit.userTheta = 0.0; orbit.baselineRadius = 6.6; orbit.baselinePhi = 0.08; }
     orbit.baselineTheta = p === 5 ? -0.52 : (p === 6 ? 0.18 : 0.0);
   }
@@ -29020,6 +29127,7 @@ function animate() {
   prevTime = now;
   sampleRenderPerf(now, dt);
   uniforms.uTime.value += dt;
+  if (fx && fx.preset === PARTICLE_CLOCK_PRESET_INDEX) updateParticleClockTexture(particleClockTex, false);
   if (isMainSceneCoveredBySplash()) {
     if (now - splashWarmRenderLast > 520) {
       splashWarmRenderLast = now;
