@@ -17,30 +17,48 @@ body::after,#desktop-window-shell::after{content:none}
 #desktop-window-shell{display:contents}
 #desktop-titlebar{display:none}
 body.desktop-shell{background:transparent}
-body.desktop-shell #desktop-window-shell{display:block;position:fixed;inset:0;overflow:hidden;border-radius:34px;clip-path:inset(0 round 34px);background:transparent;box-shadow:0 24px 80px rgba(0,0,0,.46);transform:translateZ(0)}
-body.desktop-shell.desktop-maximized #desktop-window-shell,body.desktop-shell.desktop-fullscreen #desktop-window-shell,html:fullscreen body.desktop-shell #desktop-window-shell{border-radius:0!important;clip-path:none!important;box-shadow:none!important}
+body.desktop-shell #desktop-window-shell{display:block;position:fixed;inset:0;overflow:hidden;border-radius:34px;clip-path:inset(0 round 34px);background:#000;box-shadow:0 24px 80px rgba(0,0,0,.46);transform:translateZ(0)}
+body.desktop-shell.desktop-maximized #desktop-window-shell,body.desktop-shell.desktop-fullscreen #desktop-window-shell,html:fullscreen body.desktop-shell #desktop-window-shell{border-radius:30px!important;clip-path:inset(0 round 30px)!important;box-shadow:none!important}
 body.desktop-shell #desktop-titlebar{position:fixed;z-index:500;top:0;left:0;right:0;height:44px;padding:0 12px 0 18px;display:flex;align-items:center;justify-content:space-between;background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;-webkit-app-region:drag;pointer-events:none}
 body.desktop-shell.desktop-mac #desktop-titlebar{padding-left:14px}
+body.desktop-shell.desktop-native-mac-controls #desktop-titlebar{padding-left:84px}
 body.desktop-shell #desktop-titlebar::after{content:none}
 .desktop-drag-region{height:100%;flex:1;display:flex;align-items:center;gap:9px;min-width:0;color:rgba(224,250,255,.74);font-size:12px;font-weight:600;letter-spacing:0;text-transform:uppercase;-webkit-app-region:drag;pointer-events:auto}
 .desktop-app-mark{display:none}
 .desktop-app-title{display:none}
-.mac-window-controls{display:none;align-items:center;gap:8px;height:100%;padding-right:16px;-webkit-app-region:no-drag;pointer-events:auto}
+.mac-window-controls{display:none;align-items:center;gap:10px;height:100%;padding-right:16px;-webkit-app-region:no-drag;pointer-events:auto}
 body.desktop-shell.desktop-mac .mac-window-controls{display:flex}
-.mac-window-btn{position:relative;width:14px;height:14px;border:0;border-radius:50%;padding:0;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(0,0,0,.14),0 2px 8px rgba(0,0,0,.18);transition:filter .16s,transform .16s}
+body.desktop-shell.desktop-native-mac-controls .mac-window-controls{display:none!important}
+.mac-window-btn{position:relative;width:14px;height:14px;border:0;border-radius:50%;padding:0;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(0,0,0,.16),0 2px 8px rgba(0,0,0,.18);transition:filter .16s,transform .16s,background .16s}
 .mac-window-btn:hover{filter:brightness(1.08) saturate(1.08);transform:translateY(-.5px)}
-.mac-window-btn.mac-close{background:#ff5f57}
-.mac-window-btn.mac-minimize{background:#ffbd2e}
-.mac-window-btn.mac-maximize{background:#28c840}
-.mac-window-btn::before,.mac-window-btn::after{content:'';position:absolute;left:50%;top:50%;opacity:0;transform:translate(-50%,-50%);background:rgba(45,35,31,.72);transition:opacity .12s}
-.mac-window-controls:hover .mac-window-btn::before,.mac-window-controls:hover .mac-window-btn::after{opacity:.82}
+.mac-window-btn.mac-close{background:#ff7b7b}
+.mac-window-btn.mac-minimize{background:#ffbd4f}
+.mac-window-btn.mac-maximize{background:#58ef70}
+.mac-window-btn::before,.mac-window-btn::after{content:'';position:absolute;left:50%;top:50%;opacity:.86;transform:translate(-50%,-50%);background:rgba(45,35,31,.76);transition:opacity .12s}
 .mac-window-btn.mac-close::before{width:8px;height:1.4px;transform:translate(-50%,-50%) rotate(45deg)}
 .mac-window-btn.mac-close::after{width:8px;height:1.4px;transform:translate(-50%,-50%) rotate(-45deg)}
-.mac-window-btn.mac-minimize::before{width:7px;height:1.5px}
-.mac-window-btn.mac-maximize::before{width:7px;height:7px;background:transparent;border:1.4px solid rgba(34,54,35,.76);border-radius:1.6px}
+.mac-window-btn.mac-minimize::before,.mac-window-btn.mac-minimize::after{display:none}
+.mac-window-btn.mac-maximize::before{left:60%;top:40%;width:0;height:0;background:transparent;border-style:solid;border-width:0 5px 5px 0;border-color:transparent rgba(18,83,42,.88) transparent transparent;transform:translate(-50%,-50%)}
+.mac-window-btn.mac-maximize::after{left:40%;top:60%;width:0;height:0;background:transparent;border-style:solid;border-width:5px 0 0 5px;border-color:transparent transparent transparent rgba(18,83,42,.88);transform:translate(-50%,-50%)}
+body.desktop-window-expanded .mac-window-btn.mac-maximize::before{left:62%;top:38%;border-width:5px 0 0 5px;border-color:transparent transparent transparent rgba(18,83,42,.88)}
+body.desktop-window-expanded .mac-window-btn.mac-maximize::after{left:38%;top:62%;border-width:0 5px 5px 0;border-color:transparent rgba(18,83,42,.88) transparent transparent}
+body.desktop-shell.desktop-window-expanded #desktop-titlebar{display:flex!important;justify-content:flex-start;height:64px;padding:0 0 0 20px;align-items:center;pointer-events:none}
+body.desktop-shell.desktop-window-expanded #desktop-titlebar .desktop-drag-region,body.desktop-shell.desktop-window-expanded #desktop-titlebar .desktop-window-controls{display:none!important}
+body.desktop-shell.desktop-window-expanded.desktop-mac #desktop-titlebar .mac-window-controls{display:flex!important;gap:18px;height:64px;padding:0}
+body.desktop-window-expanded .mac-window-btn{width:22px;height:22px;box-shadow:none;transform:none}
+body.desktop-window-expanded .mac-window-btn:hover{transform:none;filter:brightness(1.04) saturate(1.04)}
+body.desktop-window-expanded .mac-window-btn.mac-close{background:#ff8582}
+body.desktop-window-expanded .mac-window-btn.mac-minimize{background:#62696d}
+body.desktop-window-expanded .mac-window-btn.mac-maximize{background:#56f06f}
+body.desktop-window-expanded .mac-window-btn::before,body.desktop-window-expanded .mac-window-btn::after{opacity:1;background:#111c1f}
+body.desktop-window-expanded .mac-window-btn.mac-close::before{width:12px;height:2.2px;border:0;transform:translate(-50%,-50%) rotate(45deg)}
+body.desktop-window-expanded .mac-window-btn.mac-close::after{width:12px;height:2.2px;border:0;transform:translate(-50%,-50%) rotate(-45deg)}
+body.desktop-window-expanded .mac-window-btn.mac-maximize::before{left:5px;top:10px;width:8px;height:8px;border:0;background:#123d28;clip-path:polygon(0 100%,100% 100%,100% 0);transform:none}
+body.desktop-window-expanded .mac-window-btn.mac-maximize::after{left:10px;top:5px;width:8px;height:8px;border:0;background:#123d28;clip-path:polygon(0 0,100% 0,0 100%);transform:none}
 .desktop-window-controls{display:flex;align-items:center;gap:6px;padding:0;border-radius:0;background:transparent;box-shadow:none;-webkit-app-region:no-drag;pointer-events:auto}
 .desktop-window-btn{width:38px;height:30px;border:0;border-radius:10px;background:rgba(4,8,10,.42);color:rgba(224,250,255,.72);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .18s,color .18s,transform .18s}
 .desktop-window-btn svg{width:14px;height:14px;stroke:currentColor;stroke-width:2;fill:none}
+.desktop-window-btn .icon-triangles-out,.desktop-window-btn .icon-triangles-in{width:15px;height:15px;stroke:none;fill:currentColor}
 .desktop-window-btn:hover{background:rgba(244,210,138,.14);color:#fff1bd;transform:translateY(-1px)}
 .desktop-window-btn.close:hover{background:rgba(255,86,100,.86);color:#fff}
 body.desktop-shell.desktop-mac .desktop-native-window-btn{display:none}
@@ -70,7 +88,12 @@ body.desktop-shell #toast{top:60px}
 #fullscreen-diy-btn{min-width:108px;height:34px;opacity:0;pointer-events:none;transform:translateY(-18px) scale(.96);transition:opacity .2s cubic-bezier(.16,1,.3,1),transform .2s cubic-bezier(.16,1,.3,1),background .18s,color .18s,border-color .18s,box-shadow .18s}
 body.visual-guide-active #fullscreen-diy-zone{opacity:0;pointer-events:none!important;transition:opacity .18s cubic-bezier(.16,1,.3,1)}
 body.visual-guide-active #fullscreen-diy-btn{opacity:0!important;pointer-events:none!important;transform:translateY(-18px) scale(.96)!important}
-body.desktop-shell.desktop-fullscreen #desktop-titlebar,html:fullscreen body.desktop-shell #desktop-titlebar{display:none!important}
+body.desktop-shell.desktop-fullscreen #desktop-titlebar,html:fullscreen body.desktop-shell #desktop-titlebar{display:flex!important;justify-content:flex-start;height:76px;padding:8px 0 0 20px;align-items:flex-start;pointer-events:auto;-webkit-app-region:no-drag;opacity:0;transform:translateY(-8px);transition:opacity .18s cubic-bezier(.16,1,.3,1),transform .18s cubic-bezier(.16,1,.3,1)}
+body.desktop-shell.desktop-fullscreen #desktop-titlebar .desktop-drag-region,html:fullscreen body.desktop-shell #desktop-titlebar .desktop-drag-region,body.desktop-shell.desktop-fullscreen #desktop-titlebar .desktop-window-controls,html:fullscreen body.desktop-shell #desktop-titlebar .desktop-window-controls{display:none!important}
+body.desktop-shell.desktop-fullscreen.desktop-mac #desktop-titlebar .mac-window-controls,html:fullscreen body.desktop-shell.desktop-mac #desktop-titlebar .mac-window-controls{display:flex!important;gap:18px;height:42px;padding:0;pointer-events:none}
+body.desktop-shell.desktop-fullscreen.fullscreen-diy-peek #desktop-titlebar,html:fullscreen body.desktop-shell.fullscreen-diy-peek #desktop-titlebar,body.desktop-shell.desktop-fullscreen #desktop-titlebar:hover,html:fullscreen body.desktop-shell #desktop-titlebar:hover{opacity:1;transform:translateY(0)}
+body.desktop-shell.desktop-fullscreen.fullscreen-diy-peek.desktop-mac #desktop-titlebar .mac-window-controls,html:fullscreen body.desktop-shell.fullscreen-diy-peek.desktop-mac #desktop-titlebar .mac-window-controls,body.desktop-shell.desktop-fullscreen.desktop-mac #desktop-titlebar:hover .mac-window-controls,html:fullscreen body.desktop-shell.desktop-mac #desktop-titlebar:hover .mac-window-controls{pointer-events:auto}
+body.desktop-shell.desktop-native-mac-controls.desktop-window-expanded #desktop-titlebar,html:fullscreen body.desktop-shell.desktop-native-mac-controls #desktop-titlebar{display:none!important}
 body.desktop-shell.desktop-fullscreen #fullscreen-diy-zone,html:fullscreen body.desktop-shell #fullscreen-diy-zone{display:flex}
 body.fullscreen-diy-peek #fullscreen-diy-zone,#fullscreen-diy-zone:hover{pointer-events:auto}
 body.fullscreen-diy-peek #fullscreen-diy-btn,#fullscreen-diy-zone:hover #fullscreen-diy-btn{opacity:1;pointer-events:auto;transform:translateY(0) scale(1)}

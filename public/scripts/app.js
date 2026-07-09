@@ -325,7 +325,9 @@ function updateFullscreenDiyPeekFromPointer(x, y) {
   var hitRight = Math.max(rect.left + rect.width, anchorRect.right) + 26;
   var hitTop = Math.min(rect.top, anchorRect.top) - 18;
   var hitBottom = Math.max(rect.top + rect.height, anchorRect.bottom) + 16;
-  var active = x >= hitLeft && x <= hitRight && y >= hitTop && y <= hitBottom;
+  var inDiyHotspot = x >= hitLeft && x <= hitRight && y >= hitTop && y <= hitBottom;
+  var inMacWindowHotspot = document.body.classList.contains('desktop-mac') && x <= 172 && y <= 76;
+  var active = inDiyHotspot || inMacWindowHotspot;
   document.body.classList.toggle('fullscreen-diy-peek', active);
 }
 function isDiyMode() {
@@ -26024,21 +26026,26 @@ function toggleFullscreen() {
   document.documentElement.classList.add('desktop-shell-root');
   document.body.classList.add('desktop-shell');
   document.body.classList.toggle('desktop-mac', api.platform === 'darwin');
+  document.body.classList.toggle('desktop-native-mac-controls', api.platform === 'darwin');
   document.body.classList.remove('desktop-fullscreen');
   desktopFullscreenActive = false;
   syncCursorAutoHideMode();
 
   var maxBtn = document.querySelector('.desktop-native-window-btn[data-window-action="maximize"]');
+  var maxActionBtns = Array.prototype.slice.call(document.querySelectorAll('[data-window-action="maximize"]'));
   var maxIcon = maxBtn && maxBtn.querySelector('.icon-maximize');
   var restoreIcon = maxBtn && maxBtn.querySelector('.icon-restore');
+  var useMacFullscreenBehavior = api.platform === 'darwin';
   function applyState(state) {
     desktopWindowState = Object.assign(desktopWindowState, state || {});
     var isMaximized = !!desktopWindowState.isMaximized;
     var isFullScreen = !!desktopWindowState.isFullScreen || !!desktopWindowState.isNativeFullScreen || !!desktopWindowState.isHtmlFullScreen || !!desktopWindowState.isWindowFullScreen || !!document.fullscreenElement;
+    var isExpanded = isMaximized || isFullScreen;
     var wasFullScreen = desktopFullscreenActive;
     desktopFullscreenActive = isFullScreen;
     document.body.classList.toggle('desktop-maximized', isMaximized);
     document.body.classList.toggle('desktop-fullscreen', isFullScreen);
+    document.body.classList.toggle('desktop-window-expanded', isExpanded);
     desktopRuntimeState.fullscreen = isFullScreen;
     if (isFullScreen) layoutFullscreenDiyZone();
     if (isFullScreen !== wasFullScreen) {
@@ -26049,12 +26056,12 @@ function toggleFullscreen() {
       }
     }
     syncCursorAutoHideMode();
-    if (maxBtn) {
-      maxBtn.title = isFullScreen ? '退出全屏' : '全屏';
-      maxBtn.setAttribute('aria-label', maxBtn.title);
-    }
-    if (maxIcon) maxIcon.style.display = isFullScreen ? 'none' : '';
-    if (restoreIcon) restoreIcon.style.display = isFullScreen ? '' : 'none';
+    maxActionBtns.forEach(function(btn){
+      btn.title = isExpanded ? '恢复' : (useMacFullscreenBehavior ? '全屏' : '最大化');
+      btn.setAttribute('aria-label', btn.title);
+    });
+    if (maxIcon) maxIcon.style.display = isExpanded ? 'none' : '';
+    if (restoreIcon) restoreIcon.style.display = isExpanded ? '' : 'none';
   }
 
   document.querySelectorAll('[data-window-action]').forEach(function(btn){
@@ -26063,7 +26070,11 @@ function toggleFullscreen() {
       e.stopPropagation();
       var action = btn.getAttribute('data-window-action');
       if (action === 'minimize') api.minimize();
-      if (action === 'maximize') toggleFullscreen();
+      if (action === 'maximize') {
+        if (useMacFullscreenBehavior || desktopFullscreenActive || document.fullscreenElement) toggleFullscreen();
+        else if (typeof api.toggleMaximize === 'function') api.toggleMaximize();
+        else toggleFullscreen();
+      }
       if (action === 'toggle-maximize' && typeof api.toggleMaximize === 'function') api.toggleMaximize();
       if (action === 'close') api.close();
     });

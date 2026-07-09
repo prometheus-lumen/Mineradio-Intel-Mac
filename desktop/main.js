@@ -1439,12 +1439,18 @@ async function createWindow() {
 
   const initialBounds = getWindowedBounds();
 
+  const nativeMacWindowControls = process.platform === 'darwin';
   mainWindow = new BrowserWindow({
     ...initialBounds,
     minWidth: 960,
     minHeight: 540,
     show: false,
-    frame: false,
+    frame: nativeMacWindowControls,
+    ...(nativeMacWindowControls ? {
+      titleBarStyle: 'hiddenInset',
+      trafficLightPosition: { x: 18, y: 16 },
+      roundedCorners: true,
+    } : {}),
     fullscreen: false,
     fullscreenable: true,
     transparent: true,
