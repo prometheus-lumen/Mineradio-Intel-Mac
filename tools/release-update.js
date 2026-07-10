@@ -1,7 +1,9 @@
 'use strict';
 
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
+const crypto = require('crypto');
 const { execFileSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..');
@@ -31,11 +33,12 @@ function git(args, options) {
 }
 
 function parseArgs(argv) {
-  const args = { mode: 'auto', dryRun: false };
+  const args = { mode: 'auto', dryRun: false, resume: false };
   for (let i = 0; i < argv.length; i += 1) {
     const key = argv[i];
     if (key === '--help' || key === '-h') return { help: true };
     if (key === '--dry-run') { args.dryRun = true; continue; }
+    if (key === '--resume') { args.resume = true; continue; }
     if (!['--version', '--mode', '--base', '--notes-file'].includes(key)) fail('Unknown argument: ' + key);
     const value = argv[i + 1];
     if (!value || value.startsWith('--')) fail('Missing value for ' + key);
@@ -50,12 +53,13 @@ function usage() {
   console.log([
     'Usage:',
     '  npm run release:update -- [--version 1.1.5] [--mode auto|patch|full]',
-    '                            [--base 1.1.4] [--notes-file RELEASE_NOTES.md] [--dry-run]',
+    '                            [--base 1.1.4] [--notes-file RELEASE_NOTES.md] [--dry-run] [--resume]',
     '',
     'Examples:',
     '  npm run release:update -- --version 1.1.4 --mode full',
     '  npm run release:update',
     '  npm run release:update -- --mode patch --notes-file docs/RELEASE_NOTES.md',
+    '  npm run release:update -- --version 1.1.5 --resume',
   ].join('\n'));
 }
 
@@ -152,20 +156,38 @@ function githubToken() {
   fail('GitHub credentials not found. Set GH_TOKEN once or sign in with Git Credential Manager.');
 }
 
-async function githubRequest(token, method, url, body, headers = {}) {
-  const response = await fetch(url, {
-    method,
-    headers: {
-      'Accept': 'application/vnd.github+json',
-      'Authorization': 'Bearer ' + token,
-      'X-GitHub-Api-Version': '2022-11-28',
-      ...headers,
-    },
-    body,
-  });
-  const text = await response.text();
-  if (!response.ok) throw new Error('GitHub ' + response.status + ': ' + (text || response.statusText));
-  return text ? JSON.parse(text) : null;
+function requestTempFile(label) {
+  return path.join(os.tmpdir(), 'mineradio-release-' + label + '-' + crypto.randomBytes(8).toString('hex'));
+}
+
+async function githubRequest(token, method, url, body, headers = {}, options = {}) {
+  const headerFile = requestTempFile('headers');
+  const bodyFile = options.bodyFile || (body == null ? '' : requestTempFile('body'));
+  const allHeaders = {
+    'Accept': 'application/vnd.github+json',
+    'Authorization': 'Bearer ' + token,
+    'X-GitHub-Api-Version': '2022-11-28',
+    ...headers,
+  };
+  fs.writeFileSync(headerFile, Object.entries(allHeaders).map(([key, value]) => key + ': ' + value).join('\n') + '\n', { mode: 0o600 });
+  if (body != null && !options.bodyFile) fs.writeFileSync(bodyFile, body);
+  try {
+    const args = [
+      '--fail-with-body', '--silent', '--show-error', '--location',
+      '--request', method, '--header', '@' + headerFile,
+    ];
+    if (bodyFile) args.push('--data-binary', '@' + bodyFile);
+    args.push(url);
+    const text = String(run('curl', args)).trim();
+    return text ? JSON.parse(text) : null;
+  } catch (error) {
+    throw new Error('GitHub API request failed: ' + (error.message || error));
+  } finally {
+    try { fs.unlinkSync(headerFile); } catch (_) {}
+    if (bodyFile && !options.bodyFile) {
+      try { fs.unlinkSync(bodyFile); } catch (_) {}
+    }
+  }
 }
 
 async function findRelease(token, apiBase, tag) {
@@ -179,28 +201,38 @@ async function uploadAsset(token, owner, repo, release, filePath) {
     console.log('[release:update] Reusing uploaded asset ' + name);
     return;
   }
-  const data = fs.readFileSync(filePath);
+  const size = fs.statSync(filePath).size;
   const url = 'https://uploads.github.com/repos/' + encodeURIComponent(owner) + '/' + encodeURIComponent(repo)
     + '/releases/' + release.id + '/assets?name=' + encodeURIComponent(name);
-  await githubRequest(token, 'POST', url, data, {
+  await githubRequest(token, 'POST', url, null, {
     'Content-Type': contentType(name),
-    'Content-Length': String(data.length),
-  });
+    'Content-Length': String(size),
+  }, { bodyFile: filePath });
   console.log('[release:update] Uploaded ' + name);
 }
 
-function prepareAssets(mode, baseRef, version) {
+function prepareAssets(mode, baseRef, version, options = {}) {
   if (mode === 'full') {
-    run('npm', ['run', 'build:mac:dmg'], { inherit: true });
-    return [
+    const files = [
       path.join(ROOT, 'dist', 'Mineradio-' + version + '-x64.dmg'),
       path.join(ROOT, 'dist', 'Mineradio-' + version + '-arm64.dmg'),
       path.join(ROOT, 'dist', 'latest-mac.yml'),
     ];
+    if (options.reuse && files.every(file => fs.existsSync(file))) {
+      console.log('[release:update] Reusing existing DMG assets for ' + version);
+      return files;
+    }
+    run('npm', ['run', 'build:mac:dmg'], { inherit: true });
+    return files;
+  }
+  const baseVersion = normalizeVersion(readPackageAt(baseRef).version || baseRef);
+  const files = [path.join(ROOT, 'dist', 'Mineradio-' + baseVersion + '\u2192' + version + '.patch.json')];
+  if (options.reuse && files.every(file => fs.existsSync(file))) {
+    console.log('[release:update] Reusing existing patch asset for ' + version);
+    return files;
   }
   run(process.execPath, [path.join(ROOT, 'tools', 'generate-update-patch.js'), '--from', baseRef], { inherit: true });
-  const baseVersion = normalizeVersion(readPackageAt(baseRef).version || baseRef);
-  return [path.join(ROOT, 'dist', 'Mineradio-' + baseVersion + '\u2192' + version + '.patch.json')];
+  return files;
 }
 
 async function main() {
@@ -219,9 +251,10 @@ async function main() {
   const baseRef = resolveBaseRef(targetVersion, args.base);
   const tag = targetVersion;
   const existingTag = String(git(['tag', '--list', tag])).trim();
-  if (existingTag && String(git(['rev-parse', tag])).trim() !== String(git(['rev-parse', 'HEAD'])).trim()) {
+  if (existingTag && !args.resume && String(git(['rev-parse', tag])).trim() !== String(git(['rev-parse', 'HEAD'])).trim()) {
     fail('Tag ' + tag + ' already points to another commit.');
   }
+  if (args.resume && !existingTag) fail('--resume requires an existing release tag.');
   let mode = args.mode;
   if (mode === 'auto') mode = releaseNeedsFullBuild(baseRef, initialPackage) ? 'full' : 'patch';
 
@@ -229,24 +262,26 @@ async function main() {
   if (args.dryRun) return;
 
   const notes = releaseNotes(baseRef, args.notesFile, targetVersion);
-  run('npm', ['version', targetVersion, '--no-git-tag-version', '--allow-same-version'], { inherit: true });
-  run(process.execPath, ['--check', 'server.js'], { inherit: true });
-  run(process.execPath, ['--check', 'desktop/main.js'], { inherit: true });
-  run(process.execPath, ['--check', 'desktop/preload.js'], { inherit: true });
-  run(process.execPath, ['--check', 'public/scripts/app.js'], { inherit: true });
-  git(['diff', '--check'], { inherit: true });
-  git(['add', 'package.json', 'package-lock.json'], { inherit: true });
-  const staged = String(git(['diff', '--cached', '--name-only'])).trim();
-  if (staged) git(['commit', '-m', 'release: ' + targetVersion], { inherit: true });
+  if (!args.resume) {
+    run('npm', ['version', targetVersion, '--no-git-tag-version', '--allow-same-version'], { inherit: true });
+    run(process.execPath, ['--check', 'server.js'], { inherit: true });
+    run(process.execPath, ['--check', 'desktop/main.js'], { inherit: true });
+    run(process.execPath, ['--check', 'desktop/preload.js'], { inherit: true });
+    run(process.execPath, ['--check', 'public/scripts/app.js'], { inherit: true });
+    git(['diff', '--check'], { inherit: true });
+    git(['add', 'package.json', 'package-lock.json'], { inherit: true });
+    const staged = String(git(['diff', '--cached', '--name-only'])).trim();
+    if (staged) git(['commit', '-m', 'release: ' + targetVersion], { inherit: true });
+  }
 
   let assets;
   try {
-    assets = prepareAssets(mode, baseRef, targetVersion);
+    assets = prepareAssets(mode, baseRef, targetVersion, { reuse: args.resume || !!existingTag });
   } catch (error) {
     if (args.mode !== 'auto' || mode === 'full') throw error;
     console.warn('[release:update] Patch unavailable; falling back to full DMG release.');
     mode = 'full';
-    assets = prepareAssets(mode, baseRef, targetVersion);
+    assets = prepareAssets(mode, baseRef, targetVersion, { reuse: args.resume || !!existingTag });
   }
   assets.forEach(file => { if (!fs.existsSync(file)) fail('Missing release asset: ' + file); });
 

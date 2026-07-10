@@ -78,6 +78,7 @@
 
 ### 2026-07-10
 
+- 发布 `1.1.5` 时双架构 DMG、分支和标签均成功，GitHub REST 阶段因 Node `fetch failed` 中断；发布脚本改用系统 `curl`，并新增 `--resume` 复用现有资产、从 Release 创建/上传阶段续跑。
 - Home 时钟模块固定使用透明背景，日历外层和时间/年份/日期分块不再带独立玻璃底，以便始终展示主页大卡片背景；此项不跟随配置切换。
 - 更新入口改为默认隐藏并严格跟随 `updateAvailable`，最新版或检查失败时不展示；手动检查最新版只显示 toast，不打开更新面板。
 - 快速补丁进入 ready 状态且要求重启时，会在 500ms 后自动调用 Electron `restartApp`，并用 `restartStarted` 防止重复触发。

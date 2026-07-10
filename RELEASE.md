@@ -70,6 +70,12 @@ npm run release:update -- --version 1.1.4 --mode full
 npm run release:update -- --dry-run
 ```
 
+如果构建和标签推送已经成功，但 GitHub Release 创建或资产上传中断，可直接续传，不会重复构建：
+
+```bash
+npm run release:update -- --version 1.1.5 --resume
+```
+
 脚本优先读取 `GH_TOKEN` / `GITHUB_TOKEN`，否则复用 Git Credential Manager 已保存的 GitHub 凭据。发布失败留下草稿 Release 时，修复问题后用相同参数重跑会复用已上传资产。
 
 ### 轻量在线更新（无需重新打安装包）
