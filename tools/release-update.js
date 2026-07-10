@@ -217,6 +217,7 @@ async function uploadAsset(token, owner, repo, release, filePath) {
       await githubRequest(token, 'POST', url, null, {
         'Content-Type': contentType(name),
         'Content-Length': String(size),
+        'Expect': '',
       }, { bodyFile: filePath });
       console.log('[release:update] Uploaded ' + name);
       return;
