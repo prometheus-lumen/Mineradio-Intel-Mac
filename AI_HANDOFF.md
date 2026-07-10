@@ -78,6 +78,9 @@
 
 ### 2026-07-10
 
+- 修复 Home 大卡片高度调整后的布局裁切：天气电台/定时关闭快捷操作与日历时钟改用独立网格行，低高度下不再重叠。
+- Touch Bar 最左侧新增喜欢/取消喜欢按钮，复用页面现有收藏逻辑，并随当前歌曲状态切换空心白色/实心粉色爱心。
+- 新增 `tools/release-update.js` 和 `npm run release:update`：自动检查干净工作树、递增版本、判断补丁/完整构建、提交和打标签、推送并通过 GitHub REST 发布资产；发布前可用 `--dry-run` 查看计划。
 - macOS Mineradio 应用菜单新增 `Check for Updates…`，通过 preload 事件调用页面现有更新检测和更新弹窗。
 - 修复主页大卡片背景上传：不再把 base64 媒体塞入 localStorage，改用 IndexedDB Blob；支持图片/视频且限制 80MB，背景透明度与卡片一致，100% 透明时暂停视频。
 - 用户确认 `prometheus-lumen/Mineradio-Intel-Mac` 才是当前项目仓库；`package.json` 的 electron-builder publish 和运行时更新检测均已切换到该仓库，后续补丁/DMG Release 必须发布到这里。

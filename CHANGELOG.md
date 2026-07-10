@@ -2,6 +2,9 @@
 
 ## v1.1.4 (Unreleased)
 
+- 修复主页大卡片调节高度后天气电台、定时关闭和时钟互相覆盖或被裁切的问题，快捷操作与日历改为独立布局行。
+- MacBook Touch Bar 最左侧新增喜欢/取消喜欢按钮，未喜欢显示空心爱心，已喜欢显示粉红色实心爱心。
+- 新增 `npm run release:update` 一键发布脚本，自动递增版本、检查代码、选择快速补丁或完整 DMG、提交标签并发布 GitHub Release。
 - 在线更新支持只发布快速补丁的 GitHub Release，无需每次重新构建完整安装包。
 - Intel Mac 更新源统一切换到 `prometheus-lumen/Mineradio-Intel-Mac`，完整更新会按当前 CPU 架构选择 x64 或 arm64 DMG。
 - Mac 更新检测失败时改用 `latest-mac.yml` 兜底，DMG 文件名固定包含架构，避免双架构发布互相覆盖或选错安装包。

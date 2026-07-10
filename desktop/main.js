@@ -24,12 +24,14 @@ let windowFullscreenActive = false;
 let mainWindowStateTimer = null;
 const registeredGlobalHotkeys = new Map();
 let touchBarLyricButton = null;
+let touchBarLikeButton = null;
 let touchBarPrevButton = null;
 let touchBarPlayButton = null;
 let touchBarNextButton = null;
 let touchBarRoot = null;
 let touchBarLastLyricFrameKey = '';
 let touchBarLastPlaying = null;
+let touchBarLastLiked = null;
 
 const WINDOWED_ASPECT = 16 / 9;
 const WINDOWED_SCALE = 3 / 4;
@@ -75,6 +77,14 @@ function touchBarPlayLabel(playing) {
   return playing ? '⏸' : '▶';
 }
 
+function touchBarLikeIcon(liked) {
+  const color = liked ? '#ff6f91' : '#f5f5f7';
+  const fill = liked ? color : 'none';
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24"><path d="M12 20.5 10.7 19.3C6.1 15.2 3 12.4 3 8.9 3 6 5.2 4 8 4c1.6 0 3.1.7 4 1.9C12.9 4.7 14.4 4 16 4c2.8 0 5 2 5 4.9 0 3.5-3.1 6.3-7.7 10.4L12 20.5Z" fill="${fill}" stroke="${color}" stroke-width="1.8" stroke-linejoin="round"/></svg>`;
+  const image = nativeImage.createFromDataURL(`data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`);
+  return image && !image.isEmpty() ? image.resize({ width: 22, height: 22, quality: 'best' }) : null;
+}
+
 function touchBarLyricImage(dataUrl) {
   if (!/^data:image\/png;base64,/i.test(String(dataUrl || ''))) return null;
   const image = nativeImage.createFromDataURL(dataUrl);
@@ -84,7 +94,13 @@ function touchBarLyricImage(dataUrl) {
 
 function ensureTouchBarLyrics() {
   if (!supportsTouchBarLyrics()) return false;
-  if (touchBarRoot && touchBarLyricButton && touchBarPrevButton && touchBarPlayButton && touchBarNextButton) return true;
+  if (touchBarRoot && touchBarLikeButton && touchBarLyricButton && touchBarPrevButton && touchBarPlayButton && touchBarNextButton) return true;
+  touchBarLikeButton = new TouchBar.TouchBarButton({
+    icon: touchBarLikeIcon(false),
+    accessibilityLabel: '喜欢当前歌曲',
+    backgroundColor: '#3f454c',
+    click: () => sendGlobalHotkeyAction('toggleLike'),
+  });
   touchBarPrevButton = new TouchBar.TouchBarButton(touchBarButtonOptions('⏮', '上一首', () => sendGlobalHotkeyAction('prevTrack')));
   touchBarPlayButton = new TouchBar.TouchBarButton(touchBarButtonOptions(touchBarPlayLabel(true), '播放或暂停', () => sendGlobalHotkeyAction('togglePlay')));
   touchBarNextButton = new TouchBar.TouchBarButton(touchBarButtonOptions('⏭', '下一首', () => sendGlobalHotkeyAction('nextTrack')));
@@ -94,6 +110,8 @@ function ensureTouchBarLyrics() {
   });
   const items = TouchBar.TouchBarSpacer
     ? [
+        touchBarLikeButton,
+        new TouchBar.TouchBarSpacer({ size: 'small' }),
         touchBarPrevButton,
         new TouchBar.TouchBarSpacer({ size: 'small' }),
         touchBarPlayButton,
@@ -103,7 +121,7 @@ function ensureTouchBarLyrics() {
         new TouchBar.TouchBarSpacer({ size: 'large' }),
         touchBarLyricButton,
       ]
-    : [touchBarPrevButton, touchBarPlayButton, touchBarNextButton, touchBarLyricButton];
+    : [touchBarLikeButton, touchBarPrevButton, touchBarPlayButton, touchBarNextButton, touchBarLyricButton];
   touchBarRoot = new TouchBar({ items });
   mainWindow.setTouchBar(touchBarRoot);
   return true;
@@ -119,6 +137,12 @@ function updateTouchBarLyrics(payload = {}) {
   const progressPixel = Math.round(progress * TOUCHBAR_LYRIC_WIDTH);
   const frameKey = `${label}|${progressPixel}|${baseColor}|${highColor}`;
   const playing = payload.playing !== false;
+  const liked = !!payload.liked;
+  if (liked !== touchBarLastLiked && touchBarLikeButton) {
+    touchBarLikeButton.icon = touchBarLikeIcon(liked);
+    touchBarLikeButton.accessibilityLabel = liked ? '取消喜欢当前歌曲' : '喜欢当前歌曲';
+    touchBarLastLiked = liked;
+  }
   if (playing !== touchBarLastPlaying && touchBarPlayButton) {
     touchBarPlayButton.label = touchBarPlayLabel(playing);
     touchBarLastPlaying = playing;
@@ -137,12 +161,14 @@ function updateTouchBarLyrics(payload = {}) {
 
 function resetTouchBarLyrics() {
   touchBarLyricButton = null;
+  touchBarLikeButton = null;
   touchBarPrevButton = null;
   touchBarPlayButton = null;
   touchBarNextButton = null;
   touchBarRoot = null;
   touchBarLastLyricFrameKey = '';
   touchBarLastPlaying = null;
+  touchBarLastLiked = null;
 }
 
 const CHROMIUM_PERFORMANCE_SWITCHES = [

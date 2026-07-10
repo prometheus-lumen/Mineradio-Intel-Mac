@@ -272,17 +272,17 @@ body.home-wallpaper-preview #canvas-container{filter:none}
 .home-hero-media.is-video #home-hero-media-video{display:block}
 .home-hero::before{content:'';position:absolute;inset:0;z-index:1;background:linear-gradient(118deg,rgba(255,255,255,.060),transparent 24%,rgba(255,83,103,.070) 54%,rgba(122,215,194,.055) 82%,transparent 100%),linear-gradient(90deg,rgba(255,255,255,.032) 0 1px,transparent 1px 48px),linear-gradient(0deg,rgba(255,255,255,.024) 0 1px,transparent 1px 44px);opacity:.72;pointer-events:none}
 .home-hero::after{content:'';position:absolute;left:28px;right:28px;bottom:22px;z-index:1;height:1px;background:linear-gradient(90deg,color-mix(in srgb,var(--home-accent) 0%,transparent),color-mix(in srgb,var(--home-accent) 52%,transparent),rgba(36,66,255,.24),rgba(248,244,238,.18),color-mix(in srgb,var(--home-accent) 0%,transparent));opacity:.82;pointer-events:none}
-.home-hero-inner{position:relative;z-index:2;height:100%;display:grid;grid-template-columns:minmax(0,1.16fr) minmax(150px,.64fr);grid-template-rows:auto auto auto auto minmax(150px,1fr);column-gap:18px}
+.home-hero-inner{position:relative;z-index:2;height:100%;display:grid;grid-template-columns:minmax(0,1.16fr) minmax(150px,.64fr);grid-template-rows:auto auto auto auto auto minmax(0,1fr);column-gap:18px}
 .home-hero-inner.home-construction-inner{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:18px;padding:4px 2px;min-height:100%}
-.home-hero-inner.home-weather-inner{--weather-beat:0;--weather-bass:0;--weather-energy:0;grid-template-rows:auto auto auto auto minmax(240px,1fr);align-content:stretch}
-#empty-home.home-calendar-hidden .home-weather-inner{grid-template-rows:auto auto auto auto minmax(0,1fr)}
+.home-hero-inner.home-weather-inner{--weather-beat:0;--weather-bass:0;--weather-energy:0;grid-template-rows:auto auto auto auto auto minmax(0,1fr);align-content:stretch}
+#empty-home.home-calendar-hidden .home-weather-inner{grid-template-rows:auto auto auto auto auto minmax(0,1fr)}
 .home-kicker{grid-column:1;font-size:10px;font-weight:780;letter-spacing:.18em;color:color-mix(in srgb,var(--home-accent) 62%,rgba(255,255,255,.36));text-transform:uppercase;margin-bottom:14px}
 .home-title{grid-column:1;font-size:clamp(34px,4.6vw,58px);line-height:.98;font-weight:760;letter-spacing:0;color:rgba(255,255,255,.98);max-width:380px;text-shadow:0 10px 36px rgba(0,0,0,.26)}
 .home-title.home-construction-title{max-width:620px;font-size:clamp(32px,4.5vw,64px);line-height:1.08}
 .home-sub{grid-column:1;margin-top:14px;font-size:13px;line-height:1.62;color:rgba(255,255,255,.62);max-width:348px}
 .home-weather-meta{grid-column:1;display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
 .home-weather-pill{height:28px;padding:0 10px;border-radius:999px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.050);display:inline-flex;align-items:center;color:rgba(255,255,255,.70);font-size:11px;font-weight:680}
-.home-quick-row{grid-column:1;position:relative;z-index:6;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:22px}
+.home-quick-row{grid-column:1;grid-row:5;position:relative;z-index:6;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:22px}
 .home-chip{height:32px;padding:0 13px;border-radius:999px;border:1px solid rgba(255,255,255,.11);background:rgba(255,255,255,.060);color:rgba(255,255,255,.76);font-family:inherit;font-size:11.5px;font-weight:680;cursor:pointer;transition:background .18s,border-color .18s,color .18s,transform .18s,box-shadow .18s}
 .home-chip:hover{background:color-mix(in srgb,var(--home-accent) 10%,transparent);border-color:color-mix(in srgb,var(--home-accent) 38%,rgba(255,255,255,.10));color:#fff;box-shadow:0 10px 26px color-mix(in srgb,var(--home-accent) 8%,transparent);transform:translateY(-1px)}
 .home-console-chip{height:36px;border-color:color-mix(in srgb,var(--home-accent) 34%,rgba(255,255,255,.12));background:color-mix(in srgb,var(--home-accent) 12%,rgba(255,255,255,.055));color:#fff}
@@ -311,7 +311,7 @@ body.home-wallpaper-preview #canvas-container{filter:none}
 .home-radio-badge{display:none}
 .home-wave-track{position:absolute;left:0;right:0;top:50%;height:44px;display:flex;align-items:center;gap:4px;opacity:.94;mix-blend-mode:screen;transform:translateY(-50%)}
 .home-wave-track span{flex:1;min-width:3px;border-radius:999px;background:linear-gradient(180deg,#fff,var(--home-accent));box-shadow:0 0 12px color-mix(in srgb,var(--home-accent) 55%,transparent);height:5px;transform-origin:bottom;transition:height .08s linear,opacity .08s linear}
-.home-calendar-card{grid-column:1 / -1;grid-row:5;align-self:stretch;position:relative;min-height:0;margin-top:28px;border-radius:22px;border:1px solid rgba(255,255,255,.10);background:linear-gradient(145deg,rgba(255,255,255,.070),rgba(255,255,255,.028));box-shadow:0 18px 54px rgba(0,0,0,.30),inset 0 1px 0 rgba(255,255,255,.080);padding:20px;overflow:visible}
+.home-calendar-card{grid-column:1 / -1;grid-row:6;align-self:stretch;position:relative;min-height:0;margin-top:18px;border-radius:22px;border:1px solid rgba(255,255,255,.10);background:linear-gradient(145deg,rgba(255,255,255,.070),rgba(255,255,255,.028));box-shadow:0 18px 54px rgba(0,0,0,.30),inset 0 1px 0 rgba(255,255,255,.080);padding:20px;overflow:hidden}
 .home-calendar-card::before{content:'';position:absolute;inset:0;border-radius:inherit;background:linear-gradient(118deg,color-mix(in srgb,var(--home-accent) 18%,transparent),transparent 44%,rgba(255,255,255,.035));pointer-events:none}
 .home-calendar-face{position:relative;z-index:1;height:100%;min-height:100%;display:grid;grid-template-columns:minmax(0,1fr) clamp(116px,16%,170px);grid-template-rows:1fr 1fr;gap:14px}
 .home-calendar-time{grid-row:1 / span 2;display:flex;align-items:center;justify-content:center;min-width:0;border-radius:24px;background:rgba(0,0,0,.22);box-shadow:inset 0 1px 0 rgba(255,255,255,.08);font-size:clamp(78px,12vw,138px);line-height:.9;font-weight:780;letter-spacing:0;color:rgba(255,255,255,.97);text-shadow:0 18px 44px rgba(0,0,0,.42)}
@@ -456,9 +456,21 @@ body.empty-home-active.controls-visible #empty-home{bottom:var(--home-custom-bot
 @media (max-height:760px){.home-visual.generated{height:64px!important;max-width:260px!important}}
 @media (max-height:760px){.home-weather-inner .home-visual.generated{height:238px!important;max-width:238px!important}}
 @media (max-height:760px){.home-weather-side{width:min(238px,100%);gap:10px}.home-calendar-card{min-height:142px;padding:10px;border-radius:18px}.home-calendar-face{min-height:122px;grid-template-columns:minmax(0,1fr) 66px}.home-calendar-time{font-size:clamp(38px,5vw,58px)}.home-calendar-year{font-size:20px}.home-calendar-date{font-size:17px}.home-sleep-row{grid-template-columns:minmax(0,1fr) 66px}.home-sleep-actions{gap:6px}.home-sleep-btn{height:28px}}
+@media (max-height:760px){.home-calendar-weekday{font-size:13px}.home-calendar-date{padding-top:3px}}
 @media (max-height:700px){.home-weather-side{width:min(210px,100%);gap:8px}.home-calendar-card{min-height:124px;padding:9px}.home-calendar-face{min-height:106px;grid-template-columns:minmax(0,1fr) 58px;gap:6px}.home-calendar-time{font-size:clamp(34px,4.6vw,50px)}.home-calendar-year{font-size:17px}.home-calendar-weekday{font-size:11px}.home-calendar-date{font-size:15px}.home-sleep-switch-row{margin-top:7px;font-size:9.8px}.home-sleep-actions{margin-top:8px}}
 @media (max-width:840px){.home-weather-side{grid-column:1;grid-row:auto;justify-self:stretch;width:100%;grid-template-columns:minmax(112px,150px) minmax(0,1fr);grid-template-rows:auto;align-items:stretch;margin-top:16px}.home-weather-side .home-visual{display:block!important;height:auto!important;max-width:none!important}.home-weather-side .home-now-cover{height:auto}.home-calendar-card{min-height:100%}.home-calendar-face{min-height:128px}.home-calendar-time{font-size:clamp(38px,9vw,64px)}}
 @media (max-width:620px){.home-weather-side{grid-template-columns:1fr;margin-top:14px}.home-weather-side .home-visual{display:none!important}.home-calendar-card{padding:13px}.home-sleep-trigger-wrap{min-width:142px;gap:8px}.home-sleep-countdown{min-width:96px;padding:0 10px;font-size:10px}.home-sleep-row{grid-template-columns:minmax(0,1fr) 72px}}
+html.home-height-compact .home-kicker{margin-bottom:8px}
+html.home-height-compact .home-sub{margin-top:8px;line-height:1.38}
+html.home-height-compact .home-weather-meta{margin-top:8px;gap:6px}
+html.home-height-compact .home-quick-row{margin-top:8px}
+html.home-height-compact .home-calendar-card{min-height:0;margin-top:8px;padding:8px;border-radius:17px}
+html.home-height-compact .home-calendar-face{min-height:0;grid-template-columns:minmax(0,1fr) 66px;gap:6px}
+html.home-height-compact .home-calendar-time{font-size:clamp(34px,5vw,54px);border-radius:14px}
+html.home-height-compact .home-calendar-year{font-size:18px;border-radius:12px}
+html.home-height-compact .home-calendar-daybox{gap:2px;border-radius:12px}
+html.home-height-compact .home-calendar-weekday{flex:0 0 auto;font-size:10px;line-height:1}
+html.home-height-compact .home-calendar-date{flex:0 0 auto;padding-top:1px;font-size:12px;line-height:1}
 
 /* ---------- 顶部右侧按钮 ---------- */
 #top-right{position:fixed;z-index:10;top:24px;right:24px;display:flex;align-items:center;gap:10px}

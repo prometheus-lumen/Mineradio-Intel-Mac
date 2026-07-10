@@ -50,6 +50,28 @@ Mineradio v1.1.0 纯净安装版
 
 应用会请求 GitHub Releases latest。为了避免 `v1.0.10` 旧客户端通过软件内更新直接拉到 `v1.1.0`，本次 GitHub Release 不应设为旧更新通道的 latest。
 
+## 一键发布
+
+代码提交并保持工作树干净后，执行一条命令即可完成检查、升版本、构建补丁或 DMG、提交版本号、推送 tag、上传 GitHub Release 并设为 Latest：
+
+```bash
+npm run release:update
+```
+
+默认自动升补丁版本并判断发布模式。首次迁移或依赖、构建配置发生变化时使用完整 DMG：
+
+```bash
+npm run release:update -- --version 1.1.4 --mode full
+```
+
+可先预演且不修改文件、不上传：
+
+```bash
+npm run release:update -- --dry-run
+```
+
+脚本优先读取 `GH_TOKEN` / `GITHUB_TOKEN`，否则复用 Git Credential Manager 已保存的 GitHub 凭据。发布失败留下草稿 Release 时，修复问题后用相同参数重跑会复用已上传资产。
+
 ### 轻量在线更新（无需重新打安装包）
 
 当前 Intel Mac 更新仓库为 `https://github.com/prometheus-lumen/Mineradio-Intel-Mac`，Release 必须发布到该仓库，并设置为 Latest release；发布到原始 Windows 上游仓库时，当前客户端不会检测到。

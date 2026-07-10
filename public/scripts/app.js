@@ -13873,6 +13873,7 @@ function applyHomeCardSettings() {
   var height = Math.max(60, Math.min(96, state.height || 84));
   var bottom = Math.max(18, Math.round(58 + (84 - height) * 4.2));
   root.style.setProperty('--home-custom-bottom', bottom + 'px');
+  root.classList.toggle('home-height-compact', height <= 70);
   var transparency = Math.max(0, Math.min(100, state.opacity == null ? 54 : state.opacity));
   root.style.setProperty('--home-panel-alpha', ((100 - transparency) / 100).toFixed(2));
   root.style.setProperty('--home-hero-media-opacity', ((100 - transparency) / 100).toFixed(2));
@@ -21423,6 +21424,7 @@ function executeHotkeyAction(actionKey, source) {
   if (actionKey === 'togglePlay') return togglePlay();
   if (actionKey === 'prevTrack') return prevTrack();
   if (actionKey === 'nextTrack') return nextTrack();
+  if (actionKey === 'toggleLike') return toggleLikeCurrent();
   if (actionKey === 'volumeUp') return adjustVolumeByKeyboard(0.05);
   if (actionKey === 'volumeDown') return adjustVolumeByKeyboard(-0.05);
   if (actionKey === 'toggleFullscreen') return toggleFullscreen();
@@ -26088,10 +26090,12 @@ function touchBarLyricsPayload() {
   var meta = currentDesktopSongMeta();
   var lyric = currentDesktopLyricSnapshot();
   var colors = desktopOverlayColors();
+  var song = currentCoverSong();
   return {
     text: lyric.text,
     title: meta.title,
     playing: !!playing,
+    liked: isSongLiked(song),
     progress: clampRange(Number(lyric.progress) || 0, 0, 1),
     progressSpan: lyric.progressSpan || 4.8,
     colors: {
@@ -26152,7 +26156,7 @@ function pushTouchBarLyricsState(force) {
   if (!force && now - desktopOverlayPushState.touchBarAt < 50) return;
   var payload = touchBarLyricsPayload();
   var colors = payload.colors || {};
-  var key = payload.text + '|' + payload.title + '|' + payload.playing + '|' + Math.round((payload.progress || 0) * TOUCHBAR_LYRIC_WIDTH) + '|' + colors.primary + '|' + colors.secondary + '|' + colors.highlight;
+  var key = payload.text + '|' + payload.title + '|' + payload.playing + '|' + payload.liked + '|' + Math.round((payload.progress || 0) * TOUCHBAR_LYRIC_WIDTH) + '|' + colors.primary + '|' + colors.secondary + '|' + colors.highlight;
   if (!force && key === desktopOverlayPushState.lastTouchBarKey) return;
   payload.imageData = touchBarLyricImageData(payload);
   desktopOverlayPushState.touchBarAt = now;
