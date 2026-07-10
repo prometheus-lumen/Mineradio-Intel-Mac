@@ -25730,9 +25730,11 @@ document.addEventListener('DOMContentLoaded', function(){
 var desktopOverlayPushState = {
   lyricsAt: 0,
   wallpaperAt: 0,
+  touchBarAt: 0,
   lastLyricsKey: '',
   lastLyricsBeatKey: '',
-  lastWallpaperKey: ''
+  lastWallpaperKey: '',
+  lastTouchBarKey: ''
 };
 function getDesktopWindowApi() {
   return window.desktopWindow && window.desktopWindow.isDesktop ? window.desktopWindow : null;
@@ -25915,6 +25917,81 @@ function wallpaperPayload() {
     colors: desktopOverlayColors()
   };
 }
+function touchBarLyricsPayload() {
+  var meta = currentDesktopSongMeta();
+  var lyric = currentDesktopLyricSnapshot();
+  var colors = desktopOverlayColors();
+  return {
+    text: lyric.text,
+    title: meta.title,
+    playing: !!playing,
+    progress: clampRange(Number(lyric.progress) || 0, 0, 1),
+    progressSpan: lyric.progressSpan || 4.8,
+    colors: {
+      primary: colors.primary || '#d6f8ff',
+      secondary: colors.secondary || '#9cffdf',
+      highlight: colors.highlight || '#fff0b8'
+    }
+  };
+}
+var TOUCHBAR_LYRIC_WIDTH = 380;
+var TOUCHBAR_LYRIC_SCALE = 2;
+var touchBarLyricCanvas = null;
+function touchBarLyricImageData(payload) {
+  if (!touchBarLyricCanvas) {
+    touchBarLyricCanvas = document.createElement('canvas');
+    touchBarLyricCanvas.width = TOUCHBAR_LYRIC_WIDTH * TOUCHBAR_LYRIC_SCALE;
+    touchBarLyricCanvas.height = 30 * TOUCHBAR_LYRIC_SCALE;
+  }
+  var ctx = touchBarLyricCanvas.getContext('2d');
+  if (!ctx) return '';
+  var text = String(payload.text || payload.title || 'Mineradio').replace(/\s+/g, ' ').trim() || 'Mineradio';
+  var colors = payload.colors || {};
+  var progress = clampRange(Number(payload.progress) || 0, 0, 1);
+  var maxWidth = touchBarLyricCanvas.width - 24;
+  var fontSize = 36;
+  var fontFamily = '-apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif';
+  ctx.clearRect(0, 0, touchBarLyricCanvas.width, touchBarLyricCanvas.height);
+  ctx.font = '650 ' + fontSize + 'px ' + fontFamily;
+  var measuredWidth = ctx.measureText(text).width;
+  if (measuredWidth > maxWidth) {
+    fontSize = Math.max(26, fontSize * maxWidth / measuredWidth);
+    ctx.font = '650 ' + fontSize + 'px ' + fontFamily;
+    measuredWidth = ctx.measureText(text).width;
+  }
+  var x = touchBarLyricCanvas.width / 2;
+  var y = touchBarLyricCanvas.height / 2 + 1;
+  var left = x - measuredWidth / 2;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = colors.primary || '#d6f8ff';
+  ctx.globalAlpha = 0.72;
+  ctx.fillText(text, x, y);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(left, 0, measuredWidth * progress, touchBarLyricCanvas.height);
+  ctx.clip();
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = colors.highlight || colors.secondary || '#fff0b8';
+  ctx.fillText(text, x, y);
+  ctx.restore();
+  ctx.globalAlpha = 1;
+  return touchBarLyricCanvas.toDataURL('image/png');
+}
+function pushTouchBarLyricsState(force) {
+  var api = getDesktopWindowApi();
+  if (!api || api.platform !== 'darwin' || api.arch !== 'x64' || typeof api.updateTouchBarLyrics !== 'function') return;
+  var now = performance.now();
+  if (!force && now - desktopOverlayPushState.touchBarAt < 50) return;
+  var payload = touchBarLyricsPayload();
+  var colors = payload.colors || {};
+  var key = payload.text + '|' + payload.title + '|' + payload.playing + '|' + Math.round((payload.progress || 0) * TOUCHBAR_LYRIC_WIDTH) + '|' + colors.primary + '|' + colors.secondary + '|' + colors.highlight;
+  if (!force && key === desktopOverlayPushState.lastTouchBarKey) return;
+  payload.imageData = touchBarLyricImageData(payload);
+  desktopOverlayPushState.touchBarAt = now;
+  desktopOverlayPushState.lastTouchBarKey = key;
+  api.updateTouchBarLyrics(payload).catch(function(e){ console.warn('touch bar lyrics update failed:', e); });
+}
 function pushDesktopLyricsState(force) {
   var api = getDesktopWindowApi();
   if (!api || typeof api.updateDesktopLyrics !== 'function') return;
@@ -25985,6 +26062,9 @@ function tickDesktopOverlayState(now) {
 setInterval(function(){
   if (fx && (fx.desktopLyrics || fx.wallpaperMode)) syncDesktopOverlayState();
 }, 320);
+setInterval(function(){
+  pushTouchBarLyricsState(false);
+}, 50);
 
 // 全屏
 var desktopFullscreenActive = false;

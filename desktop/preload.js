@@ -28,6 +28,7 @@ contextBridge.exposeInMainWorld('desktopWindow', {
   },
   setDesktopLyricsEnabled: (enabled, payload) => ipcRenderer.invoke('mineradio-desktop-lyrics-set-enabled', !!enabled, payload || {}),
   updateDesktopLyrics: (payload) => ipcRenderer.invoke('mineradio-desktop-lyrics-update', payload || {}),
+  updateTouchBarLyrics: (payload) => ipcRenderer.invoke('mineradio-touchbar-lyrics-update', payload || {}),
   onDesktopLyricsLockState: (callback) => {
     if (typeof callback !== 'function') return () => {};
     const listener = (_event, payload) => callback(payload || {});

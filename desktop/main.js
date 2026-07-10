@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, screen, session, globalShortcut, dialog, systemPreferences } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, screen, session, globalShortcut, dialog, systemPreferences, TouchBar, nativeImage } = require('electron');
 const net = require('net');
 const path = require('path');
 const fs = require('fs');
@@ -23,6 +23,13 @@ let htmlFullscreenActive = false;
 let windowFullscreenActive = false;
 let mainWindowStateTimer = null;
 const registeredGlobalHotkeys = new Map();
+let touchBarLyricButton = null;
+let touchBarPrevButton = null;
+let touchBarPlayButton = null;
+let touchBarNextButton = null;
+let touchBarRoot = null;
+let touchBarLastLyricFrameKey = '';
+let touchBarLastPlaying = null;
 
 const WINDOWED_ASPECT = 16 / 9;
 const WINDOWED_SCALE = 3 / 4;
@@ -36,11 +43,106 @@ const NETEASE_LOGIN_PARTITION = 'persist:mineradio-netease-login';
 const NETEASE_LOGIN_URL = 'https://music.163.com/#/login';
 const QQ_LOGIN_PARTITION = 'persist:mineradio-qqmusic-login';
 const QQ_LOGIN_URL = 'https://y.qq.com/n/ryqq/profile';
+const TOUCHBAR_LYRIC_WIDTH = 380;
+const TOUCHBAR_LYRIC_HEIGHT = 30;
 
 function getAngleBackend() {
   if (process.platform === 'win32') return 'd3d11';
   if (process.platform === 'darwin') return process.arch === 'arm64' ? 'metal' : 'gl';
   return 'opengl';
+}
+
+function supportsTouchBarLyrics() {
+  return process.platform === 'darwin'
+    && process.arch === 'x64'
+    && !!TouchBar
+    && !!TouchBar.TouchBarButton
+    && !!mainWindow
+    && !mainWindow.isDestroyed()
+    && typeof mainWindow.setTouchBar === 'function';
+}
+
+function touchBarButtonOptions(label, accessibilityLabel, click) {
+  return {
+    label,
+    accessibilityLabel,
+    backgroundColor: '#3f454c',
+    click,
+  };
+}
+
+function touchBarPlayLabel(playing) {
+  return playing ? '⏸' : '▶';
+}
+
+function touchBarLyricImage(dataUrl) {
+  if (!/^data:image\/png;base64,/i.test(String(dataUrl || ''))) return null;
+  const image = nativeImage.createFromDataURL(dataUrl);
+  if (!image || image.isEmpty()) return null;
+  return image.resize({ width: TOUCHBAR_LYRIC_WIDTH, height: TOUCHBAR_LYRIC_HEIGHT, quality: 'best' });
+}
+
+function ensureTouchBarLyrics() {
+  if (!supportsTouchBarLyrics()) return false;
+  if (touchBarRoot && touchBarLyricButton && touchBarPrevButton && touchBarPlayButton && touchBarNextButton) return true;
+  touchBarPrevButton = new TouchBar.TouchBarButton(touchBarButtonOptions('⏮', '上一首', () => sendGlobalHotkeyAction('prevTrack')));
+  touchBarPlayButton = new TouchBar.TouchBarButton(touchBarButtonOptions(touchBarPlayLabel(true), '播放或暂停', () => sendGlobalHotkeyAction('togglePlay')));
+  touchBarNextButton = new TouchBar.TouchBarButton(touchBarButtonOptions('⏭', '下一首', () => sendGlobalHotkeyAction('nextTrack')));
+  touchBarLyricButton = new TouchBar.TouchBarButton({
+    label: 'Mineradio',
+    accessibilityLabel: 'Mineradio lyrics',
+  });
+  const items = TouchBar.TouchBarSpacer
+    ? [
+        touchBarPrevButton,
+        new TouchBar.TouchBarSpacer({ size: 'small' }),
+        touchBarPlayButton,
+        new TouchBar.TouchBarSpacer({ size: 'small' }),
+        touchBarNextButton,
+        new TouchBar.TouchBarSpacer({ size: 'large' }),
+        new TouchBar.TouchBarSpacer({ size: 'large' }),
+        touchBarLyricButton,
+      ]
+    : [touchBarPrevButton, touchBarPlayButton, touchBarNextButton, touchBarLyricButton];
+  touchBarRoot = new TouchBar({ items });
+  mainWindow.setTouchBar(touchBarRoot);
+  return true;
+}
+
+function updateTouchBarLyrics(payload = {}) {
+  if (!supportsTouchBarLyrics() || !ensureTouchBarLyrics()) return { ok: true, supported: false };
+  const label = String(payload.text || payload.title || 'Mineradio').replace(/\s+/g, ' ').trim() || 'Mineradio';
+  const colors = payload.colors || {};
+  const baseColor = String(colors.primary || payload.color || '#d6f8ff');
+  const highColor = String(colors.highlight || colors.secondary || '#fff0b8');
+  const progress = Math.max(0, Math.min(1, Number.isFinite(Number(payload.progress)) ? Number(payload.progress) : 0));
+  const progressPixel = Math.round(progress * TOUCHBAR_LYRIC_WIDTH);
+  const frameKey = `${label}|${progressPixel}|${baseColor}|${highColor}`;
+  const playing = payload.playing !== false;
+  if (playing !== touchBarLastPlaying && touchBarPlayButton) {
+    touchBarPlayButton.label = touchBarPlayLabel(playing);
+    touchBarLastPlaying = playing;
+  }
+  if (frameKey !== touchBarLastLyricFrameKey && touchBarLyricButton) {
+    const image = touchBarLyricImage(payload.imageData);
+    if (image) {
+      touchBarLyricButton.label = '';
+      touchBarLyricButton.icon = image;
+      touchBarLyricButton.accessibilityLabel = label;
+      touchBarLastLyricFrameKey = frameKey;
+    }
+  }
+  return { ok: true, supported: true };
+}
+
+function resetTouchBarLyrics() {
+  touchBarLyricButton = null;
+  touchBarPrevButton = null;
+  touchBarPlayButton = null;
+  touchBarNextButton = null;
+  touchBarRoot = null;
+  touchBarLastLyricFrameKey = '';
+  touchBarLastPlaying = null;
 }
 
 const CHROMIUM_PERFORMANCE_SWITCHES = [
@@ -1325,6 +1427,14 @@ ipcMain.handle('mineradio-desktop-lyrics-update', async (_event, payload) => {
   }
 });
 
+ipcMain.handle('mineradio-touchbar-lyrics-update', async (_event, payload) => {
+  try {
+    return updateTouchBarLyrics(payload || {});
+  } catch (e) {
+    return { ok: false, supported: false, error: e.message || 'TOUCHBAR_LYRICS_UPDATE_FAILED' };
+  }
+});
+
 ipcMain.handle('mineradio-desktop-lyrics-set-dragging', async () => {
   return { ok: true };
 });
@@ -1506,6 +1616,7 @@ async function createWindow() {
       clearTimeout(mainWindowStateTimer);
       mainWindowStateTimer = null;
     }
+    resetTouchBarLyrics();
     closeOverlayWindows();
     mainWindow = null;
   });
