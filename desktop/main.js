@@ -45,7 +45,7 @@ const NETEASE_LOGIN_PARTITION = 'persist:mineradio-netease-login';
 const NETEASE_LOGIN_URL = 'https://music.163.com/#/login';
 const QQ_LOGIN_PARTITION = 'persist:mineradio-qqmusic-login';
 const QQ_LOGIN_URL = 'https://y.qq.com/n/ryqq/profile';
-const TOUCHBAR_LYRIC_WIDTH = 380;
+const TOUCHBAR_LYRIC_WIDTH = 280;
 const TOUCHBAR_LYRIC_HEIGHT = 30;
 
 function getAngleBackend() {
@@ -77,11 +77,9 @@ function touchBarPlayLabel(playing) {
   return playing ? '⏸' : '▶';
 }
 
-function touchBarLikeIcon(liked) {
-  const color = liked ? '#ff6f91' : '#f5f5f7';
-  const fill = liked ? color : 'none';
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24"><path d="M12 20.5 10.7 19.3C6.1 15.2 3 12.4 3 8.9 3 6 5.2 4 8 4c1.6 0 3.1.7 4 1.9C12.9 4.7 14.4 4 16 4c2.8 0 5 2 5 4.9 0 3.5-3.1 6.3-7.7 10.4L12 20.5Z" fill="${fill}" stroke="${color}" stroke-width="1.8" stroke-linejoin="round"/></svg>`;
-  const image = nativeImage.createFromDataURL(`data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`);
+function touchBarLikeImage(dataUrl) {
+  if (!/^data:image\/png;base64,/i.test(String(dataUrl || ''))) return null;
+  const image = nativeImage.createFromDataURL(dataUrl);
   return image && !image.isEmpty() ? image.resize({ width: 22, height: 22, quality: 'best' }) : null;
 }
 
@@ -96,7 +94,8 @@ function ensureTouchBarLyrics() {
   if (!supportsTouchBarLyrics()) return false;
   if (touchBarRoot && touchBarLikeButton && touchBarLyricButton && touchBarPrevButton && touchBarPlayButton && touchBarNextButton) return true;
   touchBarLikeButton = new TouchBar.TouchBarButton({
-    icon: touchBarLikeIcon(false),
+    label: '♡',
+    iconPosition: 'overlay',
     accessibilityLabel: '喜欢当前歌曲',
     backgroundColor: '#3f454c',
     click: () => sendGlobalHotkeyAction('toggleLike'),
@@ -117,8 +116,7 @@ function ensureTouchBarLyrics() {
         touchBarPlayButton,
         new TouchBar.TouchBarSpacer({ size: 'small' }),
         touchBarNextButton,
-        new TouchBar.TouchBarSpacer({ size: 'large' }),
-        new TouchBar.TouchBarSpacer({ size: 'large' }),
+        new TouchBar.TouchBarSpacer({ size: 'small' }),
         touchBarLyricButton,
       ]
     : [touchBarLikeButton, touchBarPrevButton, touchBarPlayButton, touchBarNextButton, touchBarLyricButton];
@@ -139,7 +137,9 @@ function updateTouchBarLyrics(payload = {}) {
   const playing = payload.playing !== false;
   const liked = !!payload.liked;
   if (liked !== touchBarLastLiked && touchBarLikeButton) {
-    touchBarLikeButton.icon = touchBarLikeIcon(liked);
+    const likeImage = touchBarLikeImage(payload.likeImageData);
+    touchBarLikeButton.label = likeImage ? '' : (liked ? '♥' : '♡');
+    if (likeImage) touchBarLikeButton.icon = likeImage;
     touchBarLikeButton.accessibilityLabel = liked ? '取消喜欢当前歌曲' : '喜欢当前歌曲';
     touchBarLastLiked = liked;
   }

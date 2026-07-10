@@ -26123,9 +26123,41 @@ function touchBarLyricsPayload() {
     }
   };
 }
-var TOUCHBAR_LYRIC_WIDTH = 380;
+var TOUCHBAR_LYRIC_WIDTH = 280;
 var TOUCHBAR_LYRIC_SCALE = 2;
 var touchBarLyricCanvas = null;
+var touchBarLikeCanvas = null;
+function touchBarLikeImageData(liked) {
+  if (!touchBarLikeCanvas) {
+    touchBarLikeCanvas = document.createElement('canvas');
+    touchBarLikeCanvas.width = 44;
+    touchBarLikeCanvas.height = 44;
+  }
+  var ctx = touchBarLikeCanvas.getContext('2d');
+  if (!ctx) return '';
+  ctx.clearRect(0, 0, 44, 44);
+  ctx.beginPath();
+  ctx.moveTo(22, 38);
+  ctx.bezierCurveTo(19, 35, 6, 27, 6, 16);
+  ctx.bezierCurveTo(6, 9.5, 10.7, 6, 16, 6);
+  ctx.bezierCurveTo(19.2, 6, 21.2, 7.7, 22, 9.1);
+  ctx.bezierCurveTo(22.8, 7.7, 24.8, 6, 28, 6);
+  ctx.bezierCurveTo(33.3, 6, 38, 9.5, 38, 16);
+  ctx.bezierCurveTo(38, 27, 25, 35, 22, 38);
+  ctx.closePath();
+  ctx.lineWidth = 3.2;
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = liked ? '#ff6f91' : '#f5f5f7';
+  ctx.fillStyle = liked ? '#ff6f91' : 'rgba(0,0,0,0)';
+  if (liked) {
+    ctx.shadowColor = 'rgba(255,111,145,.42)';
+    ctx.shadowBlur = 5;
+  }
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.stroke();
+  return touchBarLikeCanvas.toDataURL('image/png');
+}
 function touchBarLyricImageData(payload) {
   if (!touchBarLyricCanvas) {
     touchBarLyricCanvas = document.createElement('canvas');
@@ -26177,6 +26209,7 @@ function pushTouchBarLyricsState(force) {
   var key = payload.text + '|' + payload.title + '|' + payload.playing + '|' + payload.liked + '|' + Math.round((payload.progress || 0) * TOUCHBAR_LYRIC_WIDTH) + '|' + colors.primary + '|' + colors.secondary + '|' + colors.highlight;
   if (!force && key === desktopOverlayPushState.lastTouchBarKey) return;
   payload.imageData = touchBarLyricImageData(payload);
+  payload.likeImageData = touchBarLikeImageData(payload.liked);
   desktopOverlayPushState.touchBarAt = now;
   desktopOverlayPushState.lastTouchBarKey = key;
   api.updateTouchBarLyrics(payload).catch(function(e){ console.warn('touch bar lyrics update failed:', e); });
