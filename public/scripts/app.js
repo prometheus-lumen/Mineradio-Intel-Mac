@@ -26123,7 +26123,7 @@ function touchBarLyricsPayload() {
     }
   };
 }
-var TOUCHBAR_LYRIC_WIDTH = 280;
+var TOUCHBAR_LYRIC_WIDTH = 320;
 var TOUCHBAR_LYRIC_SCALE = 2;
 var touchBarLyricCanvas = null;
 var touchBarLikeCanvas = null;

@@ -45,7 +45,7 @@ const NETEASE_LOGIN_PARTITION = 'persist:mineradio-netease-login';
 const NETEASE_LOGIN_URL = 'https://music.163.com/#/login';
 const QQ_LOGIN_PARTITION = 'persist:mineradio-qqmusic-login';
 const QQ_LOGIN_URL = 'https://y.qq.com/n/ryqq/profile';
-const TOUCHBAR_LYRIC_WIDTH = 280;
+const TOUCHBAR_LYRIC_WIDTH = 320;
 const TOUCHBAR_LYRIC_HEIGHT = 30;
 
 function getAngleBackend() {
@@ -108,13 +108,10 @@ function ensureTouchBarLyrics() {
     accessibilityLabel: 'Mineradio lyrics',
   });
   const items = TouchBar.TouchBarSpacer
-    ? [
+      ? [
         touchBarLikeButton,
-        new TouchBar.TouchBarSpacer({ size: 'small' }),
         touchBarPrevButton,
-        new TouchBar.TouchBarSpacer({ size: 'small' }),
         touchBarPlayButton,
-        new TouchBar.TouchBarSpacer({ size: 'small' }),
         touchBarNextButton,
         new TouchBar.TouchBarSpacer({ size: 'small' }),
         touchBarLyricButton,
