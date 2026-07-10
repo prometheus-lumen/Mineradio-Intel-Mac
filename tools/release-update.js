@@ -174,6 +174,7 @@ async function githubRequest(token, method, url, body, headers = {}, options = {
   try {
     const args = [
       '--fail-with-body', '--silent', '--show-error', '--location',
+      '--http1.1', '--connect-timeout', '30',
       '--request', method, '--header', '@' + headerFile,
     ];
     if (bodyFile) args.push('--data-binary', '@' + bodyFile);
@@ -197,18 +198,34 @@ async function findRelease(token, apiBase, tag) {
 
 async function uploadAsset(token, owner, repo, release, filePath) {
   const name = path.basename(filePath);
-  if ((release.assets || []).some(asset => asset.name === name)) {
-    console.log('[release:update] Reusing uploaded asset ' + name);
-    return;
-  }
   const size = fs.statSync(filePath).size;
+  const apiBase = 'https://api.github.com/repos/' + encodeURIComponent(owner) + '/' + encodeURIComponent(repo);
   const url = 'https://uploads.github.com/repos/' + encodeURIComponent(owner) + '/' + encodeURIComponent(repo)
     + '/releases/' + release.id + '/assets?name=' + encodeURIComponent(name);
-  await githubRequest(token, 'POST', url, null, {
-    'Content-Type': contentType(name),
-    'Content-Length': String(size),
-  }, { bodyFile: filePath });
-  console.log('[release:update] Uploaded ' + name);
+  for (let attempt = 1; attempt <= 4; attempt += 1) {
+    const assets = await githubRequest(token, 'GET', apiBase + '/releases/' + release.id + '/assets?per_page=100');
+    const existing = (assets || []).find(asset => asset.name === name);
+    if (existing && existing.state === 'uploaded' && Number(existing.size) === size) {
+      console.log('[release:update] Reusing uploaded asset ' + name);
+      return;
+    }
+    if (existing) {
+      console.warn('[release:update] Removing incomplete asset ' + name);
+      await githubRequest(token, 'DELETE', apiBase + '/releases/assets/' + existing.id);
+    }
+    try {
+      await githubRequest(token, 'POST', url, null, {
+        'Content-Type': contentType(name),
+        'Content-Length': String(size),
+      }, { bodyFile: filePath });
+      console.log('[release:update] Uploaded ' + name);
+      return;
+    } catch (error) {
+      if (attempt >= 4) throw error;
+      console.warn('[release:update] Upload interrupted; retrying ' + name + ' (' + attempt + '/4)');
+      await new Promise(resolve => setTimeout(resolve, attempt * 3000));
+    }
+  }
 }
 
 function prepareAssets(mode, baseRef, version, options = {}) {
