@@ -50,6 +50,18 @@ Mineradio v1.1.0 纯净安装版
 
 应用会请求 GitHub Releases latest。为了避免 `v1.0.10` 旧客户端通过软件内更新直接拉到 `v1.1.0`，本次 GitHub Release 不应设为旧更新通道的 latest。
 
+### 轻量在线更新（无需重新打安装包）
+
+仅修改 `public/`、`desktop/`、`server.js`、`dj-analyzer.js` 等应用资源，且没有新增运行依赖时，可以只发布快速补丁：
+
+```powershell
+npm run update:patch -- --from <上一版本的 Git tag 或 commit>
+```
+
+命令会比较旧版本与当前工作树，在 `dist/` 生成 `Mineradio-旧版本→新版本.patch.json`，并输出补丁 SHA256。发布时创建高于旧版的新 GitHub Release，只上传该补丁也可以；客户端会自动发现新版本，优先安装补丁并在重启后生效。GitHub 若把文件名中的箭头净化成点号，客户端仍会按补丁内的起止版本精确匹配。
+
+补丁生成前必须先更新 `package.json` 版本号并提交新增文件。若运行依赖有变化、文件操作超过 40 个、补丁超过 12 MB，脚本会拒绝生成，此时必须重新打完整安装包。安装器、Electron 二进制、原生模块和卸载逻辑的变更也必须走完整安装包。
+
 本地验证更新链路时，可以用临时 manifest：
 
 ```json

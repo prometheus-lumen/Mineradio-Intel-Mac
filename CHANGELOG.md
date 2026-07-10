@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.1.4 (Unreleased)
+
+- 在线更新支持只发布快速补丁的 GitHub Release，无需每次重新构建完整安装包。
+- 新增 `npm run update:patch -- --from <git-ref>`，自动生成带版本、逐文件 SHA256、文件删除列表的轻量补丁。
+- 快速补丁会先完成全部校验再写入；应用中途失败时自动恢复备份，避免客户端停在半更新状态。
+- 修复箭头文件名被 GitHub 净化成点号后的版本匹配，并阻止不匹配当前版本的补丁被误下载。
+
 ## v1.1.1
 
 - P0 installer safety fix: installation now defaults to the first available non-C drive from `D:\Mineradio` through `Z:\Mineradio`; it falls back to `C:\Mineradio` only when no D-Z drive exists.

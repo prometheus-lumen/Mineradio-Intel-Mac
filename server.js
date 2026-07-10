@@ -374,8 +374,7 @@ function extractReleaseNotes(body) {
 function pickReleaseAsset(assets) {
   const list = Array.isArray(assets) ? assets : [];
   const preferred = list.find(a => /\.(exe|msi)$/i.test(a && a.name || ''))
-    || list.find(a => /\.(zip|7z)$/i.test(a && a.name || ''))
-    || list[0];
+    || list.find(a => /\.(zip|7z)$/i.test(a && a.name || ''));
   if (!preferred) return null;
   const digest = assetDigestInfo(preferred);
   const candidates = uniqueDownloadCandidates(preferred.browser_download_url || '');
@@ -393,6 +392,17 @@ function patchAssetVersions(name) {
   const matches = String(name || '').match(/\d+(?:[._-]\d+){1,3}/g) || [];
   return matches.map(item => normalizeVersion(item.replace(/[._-]/g, '.'))).filter(Boolean);
 }
+function patchAssetMatchesVersions(name, fromVersion, toVersion) {
+  const from = normalizeVersion(fromVersion || '');
+  const to = normalizeVersion(toVersion || '');
+  if (!from || !to) return false;
+  const normalizedName = String(name || '')
+    .replace(/-to-/gi, '.')
+    .replace(/(?:→|->)/g, '.')
+    .replace(/[_-]+/g, '.')
+    .replace(/\.+/g, '.');
+  return normalizedName.includes(from + '.' + to);
+}
 function pickPatchAsset(assets, currentVersion, latestVersion) {
   const list = Array.isArray(assets) ? assets : [];
   const current = normalizeVersion(currentVersion || APP_VERSION);
@@ -400,15 +410,16 @@ function pickPatchAsset(assets, currentVersion, latestVersion) {
   const preferred = list.find(a => {
     const name = String(a && a.name || '');
     if (!/\.(patch\.json|patch|json)$/i.test(name)) return false;
+    if (latest && patchAssetMatchesVersions(name, current, latest)) return true;
     const versions = patchAssetVersions(name);
     if (latest) return versions[0] === current && versions[versions.length - 1] === latest;
     return versions[0] === current && name.toLowerCase().includes('patch');
-  }) || list.find(a => {
+  }) || (!latest ? list.find(a => {
     const name = String(a && a.name || '');
     if (!/\.(patch\.json|patch|json)$/i.test(name)) return false;
     const versions = patchAssetVersions(name);
     return versions[0] === current && name.toLowerCase().includes('patch');
-  }) || list.find(a => /\.(patch\.json|patch)$/i.test(a && a.name || ''));
+  }) : null);
   if (!preferred) return null;
   const digest = assetDigestInfo(preferred);
   const candidates = uniqueDownloadCandidates(preferred.browser_download_url || '');
@@ -1182,12 +1193,13 @@ function decodePatchFile(file) {
   return null;
 }
 function backupPatchTarget(job, rel, target) {
-  if (!fs.existsSync(target)) return;
+  if (!fs.existsSync(target)) return '';
   const backup = path.join(UPDATE_PATCH_BACKUP_DIR, job.id, rel);
   fs.mkdirSync(path.dirname(backup), { recursive: true });
   fs.copyFileSync(target, backup);
+  return backup;
 }
-function writePatchFile(job, file) {
+function preparePatchFile(file) {
   const rel = safePatchRelativePath(file.path || file.name);
   const target = rel ? patchTargetPath(rel) : null;
   const content = decodePatchFile(file);
@@ -1196,13 +1208,52 @@ function writePatchFile(job, file) {
   const expected = String(file.sha256 || '').trim().toLowerCase();
   const actual = sha256Hex(content);
   if (expected && expected !== actual) throw new Error('PATCH_HASH_MISMATCH:' + rel);
-  backupPatchTarget(job, rel, target);
-  fs.mkdirSync(path.dirname(target), { recursive: true });
-  const tmp = target + '.mineradio-patch';
-  fs.writeFileSync(tmp, content);
-  fs.renameSync(tmp, target);
-  if (expected && sha256Hex(fs.readFileSync(target)) !== expected) throw new Error('PATCH_WRITE_VERIFY_FAILED:' + rel);
-  return rel;
+  return { type: 'write', rel, target, content, expected };
+}
+function preparePatchDelete(value) {
+  const rel = safePatchRelativePath(typeof value === 'string' ? value : (value && (value.path || value.name)));
+  const target = rel ? patchTargetPath(rel) : null;
+  if (!rel || !target) throw new Error('INVALID_PATCH_DELETE');
+  return { type: 'delete', rel, target };
+}
+function applyPatchOperations(job, patch) {
+  const operations = patch.files.map(preparePatchFile).concat(patch.deletes.map(preparePatchDelete));
+  const applied = [];
+  try {
+    operations.forEach(operation => {
+      const existed = fs.existsSync(operation.target);
+      const backup = backupPatchTarget(job, operation.rel, operation.target);
+      applied.push({ ...operation, existed, backup });
+      if (operation.type === 'delete') {
+        if (existed) fs.unlinkSync(operation.target);
+        return;
+      }
+      fs.mkdirSync(path.dirname(operation.target), { recursive: true });
+      const tmp = operation.target + '.mineradio-patch';
+      fs.writeFileSync(tmp, operation.content);
+      fs.renameSync(tmp, operation.target);
+      if (operation.expected && sha256Hex(fs.readFileSync(operation.target)) !== operation.expected) {
+        throw new Error('PATCH_WRITE_VERIFY_FAILED:' + operation.rel);
+      }
+    });
+    return operations.map(operation => operation.rel);
+  } catch (err) {
+    applied.reverse().forEach(operation => {
+      try {
+        const tmp = operation.target + '.mineradio-patch';
+        if (fs.existsSync(tmp)) fs.unlinkSync(tmp);
+        if (operation.existed && operation.backup && fs.existsSync(operation.backup)) {
+          fs.mkdirSync(path.dirname(operation.target), { recursive: true });
+          fs.copyFileSync(operation.backup, operation.target);
+        } else if (fs.existsSync(operation.target)) {
+          fs.unlinkSync(operation.target);
+        }
+      } catch (rollbackErr) {
+        console.error('[UpdatePatchRollback]', operation.rel, rollbackErr);
+      }
+    });
+    throw err;
+  }
 }
 function normalizePatchPayload(payload) {
   if (!payload || typeof payload !== 'object') throw new Error('INVALID_PATCH_PAYLOAD');
@@ -1211,11 +1262,15 @@ function normalizePatchPayload(payload) {
   const from = normalizeVersion(payload.from || payload.baseVersion || '');
   const to = normalizeVersion(payload.to || payload.version || payload.targetVersion || '');
   const files = Array.isArray(payload.files) ? payload.files : [];
+  const deletes = Array.isArray(payload.deletes) ? payload.deletes : (Array.isArray(payload.delete) ? payload.delete : []);
   if (!from || compareVersions(from, APP_VERSION) !== 0) throw new Error('PATCH_VERSION_MISMATCH');
   if (!to || compareVersions(to, APP_VERSION) <= 0) throw new Error('PATCH_TARGET_VERSION_INVALID');
-  if (!files.length) throw new Error('PATCH_EMPTY');
-  if (files.length > 40) throw new Error('PATCH_TOO_MANY_FILES');
-  return { from, to, files, restartRequired: payload.restartRequired !== false };
+  if (!files.length && !deletes.length) throw new Error('PATCH_EMPTY');
+  if (files.length + deletes.length > 40) throw new Error('PATCH_TOO_MANY_FILES');
+  const paths = files.map(file => file && (file.path || file.name)).concat(deletes.map(item => typeof item === 'string' ? item : (item && (item.path || item.name))));
+  const normalizedPaths = paths.map(safePatchRelativePath);
+  if (normalizedPaths.some(rel => !rel) || new Set(normalizedPaths).size !== normalizedPaths.length) throw new Error('PATCH_PATH_CONFLICT');
+  return { from, to, files, deletes, restartRequired: payload.restartRequired !== false };
 }
 async function downloadAndApplyPatch(job) {
   const chunks = [];
@@ -1255,9 +1310,7 @@ async function downloadAndApplyPatch(job) {
     job.message = '正在应用快速补丁';
     job.progress = 88;
     job.updatedAt = Date.now();
-    const changed = [];
-    patch.files.forEach(file => changed.push(writePatchFile(job, file)));
-    job.changedFiles = changed;
+    job.changedFiles = applyPatchOperations(job, patch);
     job.status = 'ready';
     job.progress = 100;
     job.restartRequired = patch.restartRequired;
@@ -1329,9 +1382,7 @@ async function downloadAndApplyPatchWithMirrors(job) {
       job.progress = 88;
       job.etaSeconds = 0;
       job.updatedAt = Date.now();
-      const changed = [];
-      patch.files.forEach(file => changed.push(writePatchFile(job, file)));
-      job.changedFiles = changed;
+      job.changedFiles = applyPatchOperations(job, patch);
       job.status = 'ready';
       job.progress = 100;
       job.restartRequired = patch.restartRequired;

@@ -75,6 +75,12 @@
 
 ## 已完成工作日志
 
+### 2026-07-10
+
+- 补齐轻量在线更新发布闭环：新增 `tools/generate-update-patch.js` 和 `npm run update:patch`，可从旧 Git ref 生成无需重打安装包的资源补丁。
+- GitHub Release 可以只包含精确版本匹配的补丁资产；补丁支持写入和删除文件，应用前完成路径/哈希校验，失败后自动从 `updates/backups/patches/` 回滚。
+- 已用 `1.1.1 -> 1.1.4` 真实仓库差异生成 2.3 MB 冒烟补丁，并在隔离 HTTP 服务中验证 `1.1.4 -> 1.1.5` 下载、写入、删除、备份和 ready 状态。
+
 ### 2026-06-24
 
 - 将 `E:\Download\默认测试.json` 接入为首次启动默认用户存档和默认视觉参数；新增 `public/default-user-fx-archive.json`，并让没有本地用户存档的新用户自动得到「默认测试」槽位。
