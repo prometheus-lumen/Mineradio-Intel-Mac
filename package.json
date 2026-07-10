@@ -11,6 +11,7 @@
     "update:patch": "node tools/generate-update-patch.js",
     "build:win": "electron-builder --win nsis",
     "build:win:dir": "electron-builder --win dir",
+    "build:mac:dmg": "CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac dmg --x64 --arm64",
     "build:mac_x64:dmg": "CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac dmg --x64",
     "build:mac_arm64:dmg": "CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac dmg --arm64"
   },
@@ -50,6 +51,7 @@
       ]
     },
     "mac": {
+      "artifactName": "Mineradio-${version}-${arch}.${ext}",
       "target": [
         {
           "target": "dmg",
@@ -85,16 +87,16 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "XxHuberrr",
-        "repo": "Mineradio"
+        "owner": "prometheus-lumen",
+        "repo": "Mineradio-Intel-Mac"
       }
     ]
   },
   "mineradio": {
     "update": {
       "provider": "github",
-      "owner": "XxHuberrr",
-      "repo": "Mineradio",
+      "owner": "prometheus-lumen",
+      "repo": "Mineradio-Intel-Mac",
       "preview": true,
       "preferMirrors": true,
       "mirrors": [

@@ -1,6 +1,7 @@
 ![img.png](img.png)
 
 ## 基于Mineradio 针对Mac intel 进行优化 
+* 当前 Intel Mac 仓库及更新发布页：https://github.com/prometheus-lumen/Mineradio-Intel-Mac
 * 如需官方源代码以及windows版本，请移步至原创作者：https://github.com/XxHuberrr/Mineradio
 
 ## 关于在mac上安装一些软件时，会提示如下弹框，导致无法安装。

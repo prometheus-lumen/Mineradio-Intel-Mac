@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, screen, session, globalShortcut, dialog, systemPreferences, TouchBar, nativeImage } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, screen, session, globalShortcut, dialog, systemPreferences, TouchBar, nativeImage, Menu } = require('electron');
 const net = require('net');
 const path = require('path');
 const fs = require('fs');
@@ -440,6 +440,53 @@ function focusMainWindow() {
   mainWindow.focus();
   sendWindowState(mainWindow);
   return true;
+}
+
+function requestUpdateCheckFromMenu() {
+  if (!focusMainWindow() || !mainWindow || mainWindow.isDestroyed()) return;
+  mainWindow.webContents.send('mineradio-check-for-updates');
+}
+
+function configureApplicationMenu() {
+  if (process.platform !== 'darwin') return;
+  const template = [
+    {
+      label: APP_NAME,
+      submenu: [
+        { role: 'about' },
+        { label: 'Check for Updates…', click: requestUpdateCheckFromMenu },
+        { type: 'separator' },
+        { role: 'services' },
+        { type: 'separator' },
+        { role: 'hide' },
+        { role: 'hideOthers' },
+        { role: 'unhide' },
+        { type: 'separator' },
+        { role: 'quit' },
+      ],
+    },
+    { label: 'File', submenu: [{ role: 'close' }] },
+    {
+      label: 'Edit',
+      submenu: [
+        { role: 'undo' }, { role: 'redo' }, { type: 'separator' },
+        { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' },
+      ],
+    },
+    {
+      label: 'View',
+      submenu: [
+        { role: 'reload' }, { role: 'toggleDevTools' }, { type: 'separator' },
+        { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' },
+        { type: 'separator' }, { role: 'togglefullscreen' },
+      ],
+    },
+    {
+      label: 'Window',
+      submenu: [{ role: 'minimize' }, { role: 'zoom' }, { type: 'separator' }, { role: 'front' }],
+    },
+  ];
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
 function getUpdateDownloadDir() {
@@ -1653,6 +1700,7 @@ if (!gotSingleInstanceLock) {
   });
 
   app.whenReady().then(async () => {
+    configureApplicationMenu();
     screen.on('display-metrics-changed', () => {
       positionDesktopLyricsWindow();
       positionWallpaperWindow();

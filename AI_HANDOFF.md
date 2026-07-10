@@ -6,7 +6,8 @@
 
 - 当前真实代码/Git 仓库仍是 `E:\桌面\播放器软件\Mineradio\resources\app`。
 - 当前版本是 `v1.1.0` 纯净安装发布线；本轮已从当前可信源码重新生成并发布 `dist/Mineradio-1.1.0-Setup.exe`。
-- GitHub 仓库已公开：`https://github.com/XxHuberrr/Mineradio`
+- 当前 Intel Mac 仓库与在线更新发布源：`https://github.com/prometheus-lumen/Mineradio-Intel-Mac`
+- 原始 Windows 上游仓库：`https://github.com/XxHuberrr/Mineradio`
 - `v1.1.0` Release：`https://github.com/XxHuberrr/Mineradio/releases/tag/v1.1.0`
 - GitHub `/releases/latest` 仍返回 `v1.0.10`，这是刻意设置，避免旧版软件内更新到 1.1.0。
 - `v1.0.10` 及更早旧安装包不再信任，需要在 GitHub Release/README/SECURITY 中标记隔离。
@@ -77,6 +78,9 @@
 
 ### 2026-07-10
 
+- macOS Mineradio 应用菜单新增 `Check for Updates…`，通过 preload 事件调用页面现有更新检测和更新弹窗。
+- 修复主页大卡片背景上传：不再把 base64 媒体塞入 localStorage，改用 IndexedDB Blob；支持图片/视频且限制 80MB，背景透明度与卡片一致，100% 透明时暂停视频。
+- 用户确认 `prometheus-lumen/Mineradio-Intel-Mac` 才是当前项目仓库；`package.json` 的 electron-builder publish 和运行时更新检测均已切换到该仓库，后续补丁/DMG Release 必须发布到这里。
 - 补齐轻量在线更新发布闭环：新增 `tools/generate-update-patch.js` 和 `npm run update:patch`，可从旧 Git ref 生成无需重打安装包的资源补丁。
 - GitHub Release 可以只包含精确版本匹配的补丁资产；补丁支持写入和删除文件，应用前完成路径/哈希校验，失败后自动从 `updates/backups/patches/` 回滚。
 - 已用 `1.1.1 -> 1.1.4` 真实仓库差异生成 2.3 MB 冒烟补丁，并在隔离 HTTP 服务中验证 `1.1.4 -> 1.1.5` 下载、写入、删除、备份和 ready 状态。

@@ -52,6 +52,16 @@ Mineradio v1.1.0 纯净安装版
 
 ### 轻量在线更新（无需重新打安装包）
 
+当前 Intel Mac 更新仓库为 `https://github.com/prometheus-lumen/Mineradio-Intel-Mac`，Release 必须发布到该仓库，并设置为 Latest release；发布到原始 Windows 上游仓库时，当前客户端不会检测到。
+
+仓库当前 Latest Release 是 `1.1.3`，但该版本客户端内置的更新源仍是原始 Windows 仓库。因此 `1.1.4` 必须作为一次迁移版重新构建并发布 x64/arm64 DMG，用户手动覆盖安装一次；从 `1.1.4` 升级到后续版本时，才可以稳定只发快速补丁。
+
+Mac 双架构构建产物使用 `Mineradio-版本-架构.dmg` 命名。不要在上传 Release 时手工改名，否则 `latest-mac.yml` 中的路径会与真实资产不一致。
+
+```bash
+npm run build:mac:dmg
+```
+
 仅修改 `public/`、`desktop/`、`server.js`、`dj-analyzer.js` 等应用资源，且没有新增运行依赖时，可以只发布快速补丁：
 
 ```powershell

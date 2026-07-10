@@ -15,7 +15,8 @@
 - 可运行程序：`E:\桌面\播放器软件\Mineradio\Mineradio.exe`
 - 运行版主目录：`E:\桌面\播放器软件\Mineradio`
 - 真实代码/Git 仓库：`E:\桌面\播放器软件\Mineradio\resources\app`
-- GitHub 仓库：`https://github.com/XxHuberrr/Mineradio.git`
+- 当前 Intel Mac 仓库与更新发布源：`https://github.com/prometheus-lumen/Mineradio-Intel-Mac.git`
+- 原始 Windows 上游仓库：`https://github.com/XxHuberrr/Mineradio.git`
 - 统一备份目录：`E:\桌面\播放器软件\工作区备份`
 - 当前源码检查点：`v1.1.0`
 - 最近正式安装包 Release 基线：`v1.1.0` 纯净安装版；`v1.0.10` 及更早安装包需隔离，不再建议安装或传播。

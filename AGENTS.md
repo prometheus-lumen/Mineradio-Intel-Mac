@@ -7,7 +7,7 @@ Mineradio 是 Windows Electron 桌面音乐播放器，核心体验包括搜索�
 - 当前可运行程序：`E:\桌面\播放器软件\Mineradio\Mineradio.exe`
 - 当前运行版主目录：`E:\桌面\播放器软件\Mineradio`
 - 当前真实代码/Git 仓库：`E:\桌面\播放器软件\Mineradio\resources\app`
-- GitHub 仓库：`https://github.com/XxHuberrr/Mineradio.git`
+- GitHub 仓库：`https://github.com/prometheus-lumen/Mineradio-Intel-Mac.git`
 - 当前源码版本：`v1.1.0`
 - 统一备份区：`E:\桌面\播放器软件\工作区备份`
 

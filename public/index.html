@@ -112,6 +112,10 @@ try {
 <section id="empty-home" aria-label="Mineradio home">
   <div class="empty-home-shell">
     <div class="home-hero" data-home-card="weather">
+      <div class="home-hero-media" id="home-hero-media" aria-hidden="true">
+        <div class="home-hero-media-image" id="home-hero-media-image"></div>
+        <video id="home-hero-media-video" muted loop playsinline preload="metadata"></video>
+      </div>
       <div class="home-hero-inner home-weather-inner" id="home-weather-hero">
         <div class="home-kicker" id="home-weather-kicker">Weather Pulse</div>
         <div class="home-title" id="home-weather-title">今日天气提示</div>
@@ -718,7 +722,7 @@ try {
 
 <input type="file" id="file-input" accept=".mp3,.flac,.wav,.ogg,.m4a,.jpg,.jpeg,.png,.webp" multiple style="display:none">
 <input type="file" id="background-image-input" accept=".jpg,.jpeg,.png,.webp,.mp4,.webm,.mov,image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime" style="display:none">
-<input type="file" id="home-hero-bg-input" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" style="display:none">
+<input type="file" id="home-hero-bg-input" accept=".jpg,.jpeg,.png,.webp,.mp4,.webm,.mov,image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime" style="display:none">
 <div id="drop-overlay"><div class="drop-text">拖放音乐或封面</div></div>
 <div id="free-camera-hint"><b>自由镜头</b> R 固定/退出 · WASD 移动 · 鼠标转向 · Shift 加速 · Space/Ctrl 升降 · Q/E 轻微旋转 · 滚轮景深 · K 回正</div>
 <div id="loading-overlay"><div class="spinner"></div></div>

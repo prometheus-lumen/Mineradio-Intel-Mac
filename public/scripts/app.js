@@ -99,10 +99,18 @@ var homeVisualPresetActive = false;
 var homeVisualPrevPreset = 0;
 var HOME_CARD_LAYOUT_KEY = 'mineradio-home-card-layout-v1';
 var HOME_CARD_SETTINGS_KEY = 'mineradio-home-card-settings-v1';
+var HOME_HERO_MEDIA_DB_NAME = 'mineradio-home-media-v1';
+var HOME_HERO_MEDIA_STORE = 'media';
+var HOME_HERO_MEDIA_KEY = 'hero-background';
+var HOME_HERO_MEDIA_MAX_BYTES = 80 * 1024 * 1024;
 var HOME_CARD_DEFAULT_ORDER = ['library', 'daily', 'private', 'profile', 'more', 'recent'];
 var HOME_CARD_LABELS = { weather: '左侧大卡片', library: '我的歌单', daily: '每日推荐', private: '私人电台', profile: '听歌画像', more: '常听歌手', recent: '最近听过' };
 var homeCardLayoutState = null;
 var homeCardSettingsState = null;
+var homeHeroMediaDbPromise = null;
+var homeHeroMediaObjectUrl = '';
+var homeHeroMediaReady = false;
+var homeHeroMediaLoading = false;
 var homeCardDragActive = false;
 var HOME_LISTEN_STATS_KEY = 'mineradio-listen-stats-v1';
 var HOME_WEATHER_CITY_KEY = 'mineradio-weather-city';
@@ -13708,13 +13716,140 @@ function setHomeArt(id, url, size) {
 function homeCardLabel(id) {
   return HOME_CARD_LABELS[id] || id;
 }
+function openHomeHeroMediaDb() {
+  if (homeHeroMediaDbPromise) return homeHeroMediaDbPromise;
+  homeHeroMediaDbPromise = new Promise(function(resolve, reject){
+    if (!window.indexedDB) {
+      reject(new Error('INDEXED_DB_UNAVAILABLE'));
+      return;
+    }
+    var request = window.indexedDB.open(HOME_HERO_MEDIA_DB_NAME, 1);
+    request.onupgradeneeded = function(){
+      var db = request.result;
+      if (!db.objectStoreNames.contains(HOME_HERO_MEDIA_STORE)) db.createObjectStore(HOME_HERO_MEDIA_STORE);
+    };
+    request.onsuccess = function(){ resolve(request.result); };
+    request.onerror = function(){ reject(request.error || new Error('HOME_MEDIA_DB_OPEN_FAILED')); };
+  });
+  return homeHeroMediaDbPromise;
+}
+async function readHomeHeroMediaRecord() {
+  var db = await openHomeHeroMediaDb();
+  return new Promise(function(resolve, reject){
+    var request = db.transaction(HOME_HERO_MEDIA_STORE, 'readonly').objectStore(HOME_HERO_MEDIA_STORE).get(HOME_HERO_MEDIA_KEY);
+    request.onsuccess = function(){ resolve(request.result || null); };
+    request.onerror = function(){ reject(request.error || new Error('HOME_MEDIA_READ_FAILED')); };
+  });
+}
+async function writeHomeHeroMediaRecord(record) {
+  var db = await openHomeHeroMediaDb();
+  return new Promise(function(resolve, reject){
+    var transaction = db.transaction(HOME_HERO_MEDIA_STORE, 'readwrite');
+    transaction.objectStore(HOME_HERO_MEDIA_STORE).put(record, HOME_HERO_MEDIA_KEY);
+    transaction.oncomplete = function(){ resolve(true); };
+    transaction.onerror = function(){ reject(transaction.error || new Error('HOME_MEDIA_WRITE_FAILED')); };
+    transaction.onabort = function(){ reject(transaction.error || new Error('HOME_MEDIA_WRITE_ABORTED')); };
+  });
+}
+async function deleteHomeHeroMediaRecord() {
+  var db = await openHomeHeroMediaDb();
+  return new Promise(function(resolve, reject){
+    var transaction = db.transaction(HOME_HERO_MEDIA_STORE, 'readwrite');
+    transaction.objectStore(HOME_HERO_MEDIA_STORE).delete(HOME_HERO_MEDIA_KEY);
+    transaction.oncomplete = function(){ resolve(true); };
+    transaction.onerror = function(){ reject(transaction.error || new Error('HOME_MEDIA_DELETE_FAILED')); };
+  });
+}
+function homeHeroMediaTypeForFile(file) {
+  var mime = String(file && file.type || '').toLowerCase();
+  var name = String(file && file.name || '').toLowerCase();
+  if (/^video\//.test(mime) || /\.(mp4|webm|mov)$/.test(name)) return 'video';
+  if (/^image\//.test(mime) || /\.(jpe?g|png|webp)$/.test(name)) return 'image';
+  return '';
+}
+function validateHomeHeroMediaFile(file) {
+  if (!file) return { ok: false, error: '未选择文件' };
+  var type = homeHeroMediaTypeForFile(file);
+  if (!type) return { ok: false, error: '请选择 JPG、PNG、WebP、MP4、WebM 或 MOV 文件' };
+  if (Number(file.size || 0) > HOME_HERO_MEDIA_MAX_BYTES) return { ok: false, error: '背景文件不能超过 80MB' };
+  return { ok: true, type: type };
+}
+function resetHomeHeroMediaElements() {
+  var hero = document.querySelector('.home-hero');
+  var media = document.getElementById('home-hero-media');
+  var image = document.getElementById('home-hero-media-image');
+  var video = document.getElementById('home-hero-media-video');
+  if (homeHeroMediaObjectUrl) {
+    URL.revokeObjectURL(homeHeroMediaObjectUrl);
+    homeHeroMediaObjectUrl = '';
+  }
+  if (image) image.style.backgroundImage = '';
+  if (video) {
+    video.pause();
+    video.removeAttribute('src');
+    video.load();
+  }
+  if (media) media.classList.remove('is-video');
+  if (hero) hero.classList.remove('has-custom-bg');
+}
+function renderHomeHeroMediaRecord(record) {
+  resetHomeHeroMediaElements();
+  if (!record || (!record.blob && !record.src)) return;
+  var hero = document.querySelector('.home-hero');
+  var media = document.getElementById('home-hero-media');
+  var image = document.getElementById('home-hero-media-image');
+  var video = document.getElementById('home-hero-media-video');
+  var type = record.type === 'video' ? 'video' : 'image';
+  var src = record.src || URL.createObjectURL(record.blob);
+  if (!record.src) homeHeroMediaObjectUrl = src;
+  if (hero) hero.classList.add('has-custom-bg');
+  if (media) media.classList.toggle('is-video', type === 'video');
+  if (type === 'video' && video) {
+    video.src = src;
+    video.play().catch(function(){});
+  } else if (image) {
+    image.style.backgroundImage = 'url("' + cssImageUrl(src) + '")';
+  }
+}
+async function applyHomeHeroMedia() {
+  if (homeHeroMediaLoading) return;
+  homeHeroMediaLoading = true;
+  var state = readHomeCardSettings();
+  try {
+    var record = await readHomeHeroMediaRecord();
+    if (!record && state.heroBg) {
+      if (/^data:image\//i.test(state.heroBg)) {
+        var response = await fetch(state.heroBg);
+        var blob = await response.blob();
+        record = { blob: blob, type: 'image', name: 'legacy-background', size: blob.size, updatedAt: Date.now() };
+        await writeHomeHeroMediaRecord(record);
+        state.heroBg = '';
+        state.heroMediaType = 'image';
+        state.heroMediaName = 'legacy-background';
+        saveHomeCardSettings();
+      } else {
+        record = { src: state.heroBg, type: 'image' };
+      }
+    }
+    renderHomeHeroMediaRecord(record);
+    homeHeroMediaReady = true;
+  } catch (e) {
+    if (state.heroBg) renderHomeHeroMediaRecord({ src: state.heroBg, type: 'image' });
+    else resetHomeHeroMediaElements();
+    homeHeroMediaReady = true;
+  } finally {
+    homeHeroMediaLoading = false;
+  }
+}
 function normalizeHomeCardSettings(raw) {
   raw = raw || {};
   return {
     height: Math.max(60, Math.min(96, Math.round(Number(raw.height) || 84))),
     opacity: Math.max(0, Math.min(100, Math.round(raw.opacity == null ? 54 : Number(raw.opacity) || 0))),
     showCalendar: raw.showCalendar !== false,
-    heroBg: String(raw.heroBg || '')
+    heroBg: String(raw.heroBg || ''),
+    heroMediaType: raw.heroMediaType === 'video' ? 'video' : (raw.heroMediaType === 'image' ? 'image' : ''),
+    heroMediaName: String(raw.heroMediaName || '')
   };
 }
 function readHomeCardSettings() {
@@ -13740,14 +13875,16 @@ function applyHomeCardSettings() {
   root.style.setProperty('--home-custom-bottom', bottom + 'px');
   var transparency = Math.max(0, Math.min(100, state.opacity == null ? 54 : state.opacity));
   root.style.setProperty('--home-panel-alpha', ((100 - transparency) / 100).toFixed(2));
+  root.style.setProperty('--home-hero-media-opacity', ((100 - transparency) / 100).toFixed(2));
   root.classList.toggle('home-panel-transparent', transparency >= 100);
+  var heroVideo = document.getElementById('home-hero-media-video');
+  if (heroVideo && heroVideo.getAttribute('src')) {
+    if (transparency >= 100) heroVideo.pause();
+    else heroVideo.play().catch(function(){});
+  }
   if (empty) empty.classList.toggle('home-calendar-hidden', !state.showCalendar);
   if (calendar) calendar.classList.toggle('home-card-hidden', !state.showCalendar);
-  if (hero) {
-    hero.classList.toggle('has-custom-bg', !!state.heroBg);
-    if (state.heroBg) hero.style.setProperty('--home-hero-bg', 'url("' + cssImageUrl(state.heroBg) + '")');
-    else hero.style.removeProperty('--home-hero-bg');
-  }
+  if (hero && !homeHeroMediaReady && !homeHeroMediaLoading) applyHomeHeroMedia();
   syncHomeSettingsControls();
 }
 function syncHomeSettingsControls() {
@@ -13959,13 +14096,17 @@ function pickHomeHeroBackground(e) {
   var input = document.getElementById('home-hero-bg-input');
   if (input) input.click();
 }
-function clearHomeHeroBackground(e) {
+async function clearHomeHeroBackground(e) {
   if (e) {
     e.preventDefault();
     e.stopPropagation();
   }
   var state = readHomeCardSettings();
   state.heroBg = '';
+  state.heroMediaType = '';
+  state.heroMediaName = '';
+  try { await deleteHomeHeroMediaRecord(); } catch (err) {}
+  homeHeroMediaReady = false;
   saveHomeCardSettings();
   applyHomeCardSettings();
   showToast('大卡片背景已清除');
@@ -14270,24 +14411,34 @@ function initHomeCardCustomization() {
   var bgInput = document.getElementById('home-hero-bg-input');
   if (bgInput && !bgInput._homeSettingsBound) {
     bgInput._homeSettingsBound = true;
-    bgInput.addEventListener('change', function(){
+    bgInput.addEventListener('change', async function(){
       var file = bgInput.files && bgInput.files[0];
       bgInput.value = '';
       if (!file) return;
-      if (!/^image\//i.test(file.type || '')) {
-        showToast('请选择图片文件');
+      var validation = validateHomeHeroMediaFile(file);
+      if (!validation.ok) {
+        showToast(validation.error);
         return;
       }
-      var reader = new FileReader();
-      reader.onload = function(){
+      try {
+        await writeHomeHeroMediaRecord({
+          blob: file,
+          type: validation.type,
+          name: String(file.name || ''),
+          size: Number(file.size || 0),
+          updatedAt: Date.now()
+        });
         var state = readHomeCardSettings();
-        state.heroBg = String(reader.result || '');
+        state.heroBg = '';
+        state.heroMediaType = validation.type;
+        state.heroMediaName = String(file.name || '');
+        homeHeroMediaReady = false;
         saveHomeCardSettings();
         applyHomeCardSettings();
-        showToast('大卡片背景已更新');
-      };
-      reader.onerror = function(){ showToast('背景读取失败'); };
-      reader.readAsDataURL(file);
+        showToast(validation.type === 'video' ? '大卡片视频背景已更新' : '大卡片图片背景已更新');
+      } catch (err) {
+        showToast('背景保存失败，请检查磁盘空间');
+      }
     });
   }
   document.addEventListener('click', function(){
@@ -22103,17 +22254,33 @@ function setUpdatePreviewVisible(visible) {
   }
 }
 
-async function checkLatestUpdate() {
+async function checkLatestUpdate(options) {
+  options = options || {};
   try {
     var data = await apiJson('/api/update/latest?t=' + Date.now());
     applyLatestUpdateInfo(data);
+    if (options.manual) {
+      setUpdatePreviewVisible(true);
+      openUpdatePanel();
+      if (data && data.error) showToast('检查更新失败：' + data.error);
+      else showToast(data && data.updateAvailable ? '发现新版本 v' + updatePreviewState.version : '当前已是最新版本');
+    }
   } catch (e) {
     updatePreviewState.preview = true;
     updatePreviewState.updateAvailable = false;
     updatePreviewState.hero = '当前版本，更新检测已就绪。';
     renderUpdatePreviewPanel();
     setUpdatePreviewVisible(true);
+    if (options.manual) {
+      openUpdatePanel();
+      showToast('检查更新失败，请稍后重试');
+    }
   }
+}
+
+function manualCheckForUpdates() {
+  showToast('正在检查更新…');
+  checkLatestUpdate({ manual: true });
 }
 
 function applyLatestUpdateInfo(data) {
@@ -26266,6 +26433,9 @@ safeRenderQueuePanel('startup');
 updateCustomCoverButton();
 updateCustomLyricControls();
 updateLikeButtons();
+if (window.desktopWindow && typeof window.desktopWindow.onCheckForUpdates === 'function') {
+  window.desktopWindow.onCheckForUpdates(manualCheckForUpdates);
+}
 setTimeout(initUpdatePreview, 9000);
 
 // ============================================================

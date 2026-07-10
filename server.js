@@ -373,8 +373,23 @@ function extractReleaseNotes(body) {
 }
 function pickReleaseAsset(assets) {
   const list = Array.isArray(assets) ? assets : [];
-  const preferred = list.find(a => /\.(exe|msi)$/i.test(a && a.name || ''))
-    || list.find(a => /\.(zip|7z)$/i.test(a && a.name || ''));
+  const platformPatterns = process.platform === 'darwin'
+    ? [/\.dmg$/i, /\.(zip|7z)$/i]
+    : [/\.(exe|msi)$/i, /\.(zip|7z)$/i];
+  const archPattern = process.arch === 'arm64'
+    ? /(?:^|[_.-])(?:arm64|aarch64)(?:[_.-]|$)/i
+    : /(?:^|[_.-])(?:x64|x86_64|amd64)(?:[_.-]|$)/i;
+  const otherArchPattern = process.arch === 'arm64'
+    ? /(?:^|[_.-])(?:x64|x86_64|amd64)(?:[_.-]|$)/i
+    : /(?:^|[_.-])(?:arm64|aarch64)(?:[_.-]|$)/i;
+  let preferred = null;
+  for (const pattern of platformPatterns) {
+    const candidates = list.filter(a => pattern.test(String(a && a.name || '')));
+    preferred = candidates.find(a => archPattern.test(String(a && a.name || '')))
+      || candidates.find(a => !otherArchPattern.test(String(a && a.name || '')))
+      || null;
+    if (preferred) break;
+  }
   if (!preferred) return null;
   const digest = assetDigestInfo(preferred);
   const candidates = uniqueDownloadCandidates(preferred.browser_download_url || '');
@@ -742,7 +757,8 @@ function parseLatestYmlUpdateInfo(text, reason) {
 }
 async function fetchLatestYmlUpdateInfo(reason) {
   if (!UPDATE_CONFIG.configured || UPDATE_CONFIG.provider !== 'github') throw updateError('UPDATE_REPOSITORY_NOT_CONFIGURED');
-  const latestYmlUrl = `https://github.com/${encodeURIComponent(UPDATE_CONFIG.owner)}/${encodeURIComponent(UPDATE_CONFIG.repo)}/releases/latest/download/latest.yml`;
+  const channelFile = process.platform === 'darwin' ? 'latest-mac.yml' : 'latest.yml';
+  const latestYmlUrl = `https://github.com/${encodeURIComponent(UPDATE_CONFIG.owner)}/${encodeURIComponent(UPDATE_CONFIG.repo)}/releases/latest/download/${channelFile}`;
   const candidates = uniqueDownloadCandidates(latestYmlUrl);
   const result = await fetchTextFromCandidates(candidates, 6500);
   return parseLatestYmlUpdateInfo(result.text, reason);

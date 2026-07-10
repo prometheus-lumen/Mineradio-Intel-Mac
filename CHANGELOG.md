@@ -3,6 +3,11 @@
 ## v1.1.4 (Unreleased)
 
 - 在线更新支持只发布快速补丁的 GitHub Release，无需每次重新构建完整安装包。
+- Intel Mac 更新源统一切换到 `prometheus-lumen/Mineradio-Intel-Mac`，完整更新会按当前 CPU 架构选择 x64 或 arm64 DMG。
+- Mac 更新检测失败时改用 `latest-mac.yml` 兜底，DMG 文件名固定包含架构，避免双架构发布互相覆盖或选错安装包。
+- macOS 应用菜单新增 `Check for Updates…`，可随时手动检查并打开现有更新面板。
+- 修复主页大卡片背景上传因 localStorage 配额导致的失效，图片和视频改用独立媒体存储，支持 JPG、PNG、WebP、MP4、WebM、MOV，单文件最大 80MB。
+- 主页大卡片背景跟随卡片透明度；透明度 100% 时背景完全隐藏并暂停视频解码。
 - 新增 `npm run update:patch -- --from <git-ref>`，自动生成带版本、逐文件 SHA256、文件删除列表的轻量补丁。
 - 快速补丁会先完成全部校验再写入；应用中途失败时自动恢复备份，避免客户端停在半更新状态。
 - 修复箭头文件名被 GitHub 净化成点号后的版本匹配，并阻止不匹配当前版本的补丁被误下载。
