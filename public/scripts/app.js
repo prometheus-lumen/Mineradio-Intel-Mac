@@ -198,6 +198,7 @@ var updatePreviewState = {
   failedAttempts: [],
   message: '',
   restartRequired: false,
+  restartStarted: false,
   patchFallbackTried: false,
   hero: '当前版本，更新检测已就绪。',
   notes: [
@@ -22233,9 +22234,8 @@ function updateProgressDetailText() {
 }
 function initUpdatePreview() {
   renderUpdatePreviewPanel();
-  setUpdatePreviewVisible(true);
+  setUpdatePreviewVisible(false);
   checkLatestUpdate();
-  setTimeout(startUpdateIconBreathing, 760);
 }
 
 function setUpdatePreviewVisible(visible) {
@@ -22262,19 +22262,24 @@ async function checkLatestUpdate(options) {
     var data = await apiJson('/api/update/latest?t=' + Date.now());
     applyLatestUpdateInfo(data);
     if (options.manual) {
-      setUpdatePreviewVisible(true);
-      openUpdatePanel();
-      if (data && data.error) showToast('检查更新失败：' + data.error);
-      else showToast(data && data.updateAvailable ? '发现新版本 v' + updatePreviewState.version : '当前已是最新版本');
+      if (data && data.updateAvailable) {
+        setUpdatePreviewVisible(true);
+        openUpdatePanel();
+        showToast('发现新版本 v' + updatePreviewState.version);
+      } else {
+        closeUpdatePanel();
+        setUpdatePreviewVisible(false);
+        showToast(data && data.error ? '检查更新失败：' + data.error : '当前已是最新版本');
+      }
     }
   } catch (e) {
     updatePreviewState.preview = true;
     updatePreviewState.updateAvailable = false;
     updatePreviewState.hero = '当前版本，更新检测已就绪。';
     renderUpdatePreviewPanel();
-    setUpdatePreviewVisible(true);
+    setUpdatePreviewVisible(false);
     if (options.manual) {
-      openUpdatePanel();
+      closeUpdatePanel();
       showToast('检查更新失败，请稍后重试');
     }
   }
@@ -22303,7 +22308,8 @@ function applyLatestUpdateInfo(data) {
     updatePreviewState.notes = release.notes.slice(0, 4);
   }
   renderUpdatePreviewPanel();
-  setUpdatePreviewVisible(updatePreviewState.updateAvailable || updatePreviewState.preview);
+  setUpdatePreviewVisible(updatePreviewState.updateAvailable);
+  if (updatePreviewState.updateAvailable) startUpdateIconBreathing();
 }
 
 function startUpdateIconBreathing() {
@@ -22370,7 +22376,8 @@ function syncUpdatePreviewStateClass() {
   var canDownloadUpdate = updatePreviewState.configured && updatePreviewState.updateAvailable && updatePreviewState.downloadUrl;
   var canOpenRelease = updatePreviewState.configured && updatePreviewState.updateAvailable && !updatePreviewState.downloadUrl && updatePreviewState.releaseUrl;
   if (label) {
-    if (isDownloading) label.textContent = (isPatch ? '快速补丁 ' : '正在下载 ') + Math.round(updatePreviewState.progress) + '%';
+    if (updatePreviewState.restartStarted) label.textContent = '正在重启';
+    else if (isDownloading) label.textContent = (isPatch ? '快速补丁 ' : '正在下载 ') + Math.round(updatePreviewState.progress) + '%';
     else if (isOpening) label.textContent = '正在打开安装包';
     else if (isError && updatePreviewState.mode === 'patch' && updatePreviewState.downloadUrl) label.textContent = '下载完整安装包';
     else if (isError) label.textContent = updatePreviewState.mode === 'installer' ? '重试下载' : '重试更新';
@@ -22381,10 +22388,11 @@ function syncUpdatePreviewStateClass() {
     else if (isReady) label.textContent = updatePreviewState.configured ? '打开安装包' : '预览完成';
     else label.textContent = updatePreviewState.patchAvailable ? '安装快速补丁' : ((canDownloadUpdate || canOpenRelease) ? '下载完整安装包' : '立即更新');
   }
-  if (btn) btn.disabled = false;
+  if (btn) btn.disabled = !!updatePreviewState.restartStarted;
   var foot = document.getElementById('update-footnote');
   if (foot) {
-    if (isDownloading) foot.textContent = (updatePreviewState.message || (isPatch ? '正在下载快速补丁' : '正在下载完整安装包')) + (updateProgressDetailText() ? ' · ' + updateProgressDetailText() : '');
+    if (updatePreviewState.restartStarted) foot.textContent = '更新已完成，Mineradio 正在自动重启。';
+    else if (isDownloading) foot.textContent = (updatePreviewState.message || (isPatch ? '正在下载快速补丁' : '正在下载完整安装包')) + (updateProgressDetailText() ? ' · ' + updateProgressDetailText() : '');
     else if (isError) foot.textContent = '下载失败：' + (updatePreviewState.errorReason || updatePreviewState.errorDetail || updatePreviewState.message || '请稍后重试') + (updatePreviewState.failedAttempts && updatePreviewState.failedAttempts.length ? ' · 已尝试 ' + updatePreviewState.failedAttempts.length + ' 条线路' : '');
     else if (isReady && isPatch) foot.textContent = updatePreviewState.restartRequired ? '快速补丁已应用，重启 Mineradio 后生效。' : '快速补丁已应用。';
     else if (isReady) foot.textContent = updatePreviewState.cached ? '已复用上次校验通过的安装包，不会重复下载。' : '安装包已准备好，点击按钮后再打开安装。';
@@ -22521,6 +22529,7 @@ async function startRealUpdatePatch() {
   updatePreviewState.errorDetail = '';
   updatePreviewState.failedAttempts = [];
   updatePreviewState.patchFallbackTried = false;
+  updatePreviewState.restartStarted = false;
   updatePreviewState.message = '正在下载快速补丁';
   updateUpdatePreviewProgress(0);
   try {
@@ -22630,20 +22639,29 @@ function applyUpdateDownloadJob(job) {
     updateUpdatePreviewProgress(100);
     pulseUpdateReady();
     if (updatePreviewState.mode === 'patch') {
-      showToast(updatePreviewState.restartRequired ? '快速补丁已应用，重启后生效' : '快速补丁已应用');
+      if (updatePreviewState.restartRequired) {
+        showToast('快速补丁已应用，正在自动重启');
+        setTimeout(restartForAppliedPatch, 500);
+      } else {
+        showToast('快速补丁已应用');
+      }
     } else if (updatePreviewState.installerPath) {
       showToast(updatePreviewState.cached ? '已复用上次下载的安装包' : '安装包已下载，点击按钮打开');
     }
   }
 }
 async function restartForAppliedPatch() {
-  if (!updatePreviewState.restartRequired) return;
+  if (!updatePreviewState.restartRequired || updatePreviewState.restartStarted) return;
+  updatePreviewState.restartStarted = true;
+  syncUpdatePreviewStateClass();
   try {
     if (window.desktopWindow && typeof window.desktopWindow.restartApp === 'function') {
       await window.desktopWindow.restartApp();
       return;
     }
   } catch (e) {}
+  updatePreviewState.restartStarted = false;
+  syncUpdatePreviewStateClass();
   showToast('请手动重启 Mineradio 让补丁生效');
 }
 
