@@ -1816,8 +1816,10 @@ async function createWindow() {
     } : {}),
     fullscreen: false,
     fullscreenable: true,
-    transparent: !nativeMacWindowControls,
-    backgroundColor: nativeMacWindowControls ? '#000000' : '#00000000',
+    // Windows 的透明 BrowserWindow 与视频层 / backdrop-filter 叠加时会触发
+    // DirectComposition 闪烁。主窗口保持不透明，页面内部继续负责玻璃和圆角。
+    transparent: false,
+    backgroundColor: '#000000',
     hasShadow: true,
     autoHideMenuBar: true,
     title: APP_NAME,

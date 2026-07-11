@@ -5493,7 +5493,61 @@ var lyricTiltEuler = new THREE.Euler(0, 0, 0, 'YXZ');
 var lyricBaseQuat = new THREE.Quaternion();
 var lyricTiltQuat = new THREE.Quaternion();
 var lyricTargetQuat = new THREE.Quaternion();
+var lyricViewportCorner = new THREE.Vector3();
+var lyricViewportCenter = new THREE.Vector3();
+var lyricViewportBasisX = new THREE.Vector3();
+var lyricViewportBasisY = new THREE.Vector3();
+var lyricViewportOffsetX = new THREE.Vector3(1, 0, 0);
+var lyricViewportOffsetY = new THREE.Vector3(0, 1, 0);
 var LYRIC_CAMERA_LOCK_MAX_SCALE = 0.80;
+function constrainCurrentLyricToViewport(mesh) {
+  if (!mesh || !camera || !stageLyrics.group || !mesh.userData || !mesh.userData.lyric) return;
+  var data = mesh.userData.lyric;
+  var halfW = Math.max(0.2, (data.textWorldW || data.worldW || 5.4) * 0.5);
+  var halfH = Math.max(0.08, (data.textWorldH || data.worldH || 0.8) * 0.58);
+  stageLyrics.group.updateMatrixWorld(true);
+  mesh.updateMatrixWorld(true);
+  var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (var ix = -1; ix <= 1; ix += 2) {
+    for (var iy = -1; iy <= 1; iy += 2) {
+      lyricViewportCorner.set(ix * halfW, iy * halfH, 0).applyMatrix4(mesh.matrixWorld).project(camera);
+      if (!isFinite(lyricViewportCorner.x) || !isFinite(lyricViewportCorner.y)) return;
+      minX = Math.min(minX, lyricViewportCorner.x);
+      maxX = Math.max(maxX, lyricViewportCorner.x);
+      minY = Math.min(minY, lyricViewportCorner.y);
+      maxY = Math.max(maxY, lyricViewportCorner.y);
+    }
+  }
+  var spanX = maxX - minX;
+  var spanY = maxY - minY;
+  var fit = Math.min(1, 1.84 / Math.max(0.001, spanX), 1.76 / Math.max(0.001, spanY));
+  if (fit < 0.999) {
+    mesh.scale.multiplyScalar(Math.max(0.82, fit));
+    var centerX = (minX + maxX) * 0.5;
+    var centerY = (minY + maxY) * 0.5;
+    var appliedFit = Math.max(0.82, fit);
+    minX = centerX - spanX * appliedFit * 0.5;
+    maxX = centerX + spanX * appliedFit * 0.5;
+    minY = centerY - spanY * appliedFit * 0.5;
+    maxY = centerY + spanY * appliedFit * 0.5;
+  }
+  var correctX = minX < -0.92 ? (-0.92 - minX) : (maxX > 0.92 ? (0.92 - maxX) : 0);
+  var correctY = minY < -0.88 ? (-0.88 - minY) : (maxY > 0.88 ? (0.88 - maxY) : 0);
+  if (!correctX && !correctY) return;
+  lyricViewportCenter.copy(mesh.position).applyMatrix4(stageLyrics.group.matrixWorld).project(camera);
+  lyricViewportBasisX.copy(mesh.position).add(lyricViewportOffsetX).applyMatrix4(stageLyrics.group.matrixWorld).project(camera);
+  lyricViewportBasisY.copy(mesh.position).add(lyricViewportOffsetY).applyMatrix4(stageLyrics.group.matrixWorld).project(camera);
+  var ax = lyricViewportBasisX.x - lyricViewportCenter.x;
+  var ay = lyricViewportBasisX.y - lyricViewportCenter.y;
+  var bx = lyricViewportBasisY.x - lyricViewportCenter.x;
+  var by = lyricViewportBasisY.y - lyricViewportCenter.y;
+  var det = ax * by - ay * bx;
+  if (Math.abs(det) < 0.00001) return;
+  var localX = (correctX * by - correctY * bx) / det;
+  var localY = (ax * correctY - ay * correctX) / det;
+  mesh.position.x += clampRange(localX, -0.72, 0.72);
+  mesh.position.y += clampRange(localY, -0.72, 0.72);
+}
 function isCascadeLyricFlow() {
   var mode = fx && normalizeLyricFlowMode(fx.lyricFlowMode);
   return mode === 'cascade' || mode === 'cloud' || mode === 'network';
@@ -7563,7 +7617,7 @@ function updateStageLyrics3D(dt) {
       } else if (lyricSceneMode === 'slant') {
         mesh.userData.skullMouthMeshLocked = false;
         var slantSide = Math.sin(seed * 8.71) >= 0 ? 1 : -1;
-        mesh.position.x += ((slantSide * (0.82 - a * 0.62) + Math.sin(t * 0.34 + seed) * 0.14) - mesh.position.x) * 0.20;
+        mesh.position.x += ((slantSide * (1.08 - a * 0.78) + Math.sin(t * 0.34 + seed) * 0.20) - mesh.position.x) * 0.20;
         mesh.position.y += ((0.18 + Math.cos(t * 0.48 + seed) * 0.06) - mesh.position.y) * 0.12;
         mesh.position.z += ((1.48 + Math.sin(t * 0.25 + seed) * 0.08) - mesh.position.z) * 0.10;
         mesh.scale.setScalar(0.98 + a * 0.08 + bass * 0.04);
@@ -7578,8 +7632,8 @@ function updateStageLyrics3D(dt) {
         mesh.rotation.z = Math.sin(t * 0.72 + seed) * 0.16;
       } else if (lyricSceneMode === 'scatter') {
         mesh.userData.skullMouthMeshLocked = false;
-        var scatterX = Math.sin(seed * 11.7) * 0.95;
-        var scatterY = 0.16 + Math.cos(seed * 7.9) * 0.46;
+        var scatterX = Math.sin(seed * 11.7) * 1.18;
+        var scatterY = 0.16 + Math.cos(seed * 7.9) * 0.58;
         mesh.position.x += (scatterX - mesh.position.x) * 0.22;
         mesh.position.y += (scatterY - mesh.position.y) * 0.20;
         mesh.position.z += ((1.35 + Math.sin(seed * 5.3) * 0.32) - mesh.position.z) * 0.16;
@@ -7597,16 +7651,16 @@ function updateStageLyrics3D(dt) {
       } else if (lyricSceneMode === 'orbit') {
         mesh.userData.skullMouthMeshLocked = false;
         var orbitPhase = t * 0.72 + seed;
-        mesh.position.x += ((Math.sin(orbitPhase) * 0.90) - mesh.position.x) * 0.18;
-        mesh.position.y += ((0.16 + Math.cos(orbitPhase) * 0.42) - mesh.position.y) * 0.18;
-        mesh.position.z += ((1.46 + Math.sin(orbitPhase * 0.72) * 0.28) - mesh.position.z) * 0.16;
+        mesh.position.x += ((Math.sin(orbitPhase) * 1.15) - mesh.position.x) * 0.18;
+        mesh.position.y += ((0.16 + Math.cos(orbitPhase) * 0.54) - mesh.position.y) * 0.18;
+        mesh.position.z += ((1.46 + Math.sin(orbitPhase * 0.72) * 0.36) - mesh.position.z) * 0.16;
         mesh.scale.setScalar(0.78 + (Math.cos(orbitPhase) + 1) * 0.18 + beatPulse * 0.05);
         mesh.rotation.z = Math.sin(orbitPhase * 0.64) * 0.18;
       } else if (lyricSceneMode === 'wave') {
         mesh.userData.skullMouthMeshLocked = false;
         var wavePhase = t * 1.18 + seed;
-        mesh.position.x += ((Math.sin(wavePhase) * 0.66) - mesh.position.x) * 0.21;
-        mesh.position.y += ((0.16 + Math.sin(wavePhase * 1.42) * 0.38) - mesh.position.y) * 0.21;
+        mesh.position.x += ((Math.sin(wavePhase) * 0.88) - mesh.position.x) * 0.21;
+        mesh.position.y += ((0.16 + Math.sin(wavePhase * 1.42) * 0.50) - mesh.position.y) * 0.21;
         mesh.position.z += ((1.48 + Math.cos(wavePhase) * 0.18) - mesh.position.z) * 0.17;
         mesh.scale.setScalar(0.98 + Math.sin(wavePhase) * 0.08);
         mesh.rotation.z = Math.cos(wavePhase) * 0.18;
@@ -7640,8 +7694,8 @@ function updateStageLyrics3D(dt) {
       } else if (lyricSceneMode === 'pendulum') {
         mesh.userData.skullMouthMeshLocked = false;
         var pendulumPhase = Math.sin(t * 0.74 + seed);
-        mesh.position.x += ((pendulumPhase * 0.72) - mesh.position.x) * 0.18;
-        mesh.position.y += ((0.24 - Math.abs(pendulumPhase) * 0.14) - mesh.position.y) * 0.18;
+        mesh.position.x += ((pendulumPhase * 0.94) - mesh.position.x) * 0.18;
+        mesh.position.y += ((0.28 - Math.abs(pendulumPhase) * 0.18) - mesh.position.y) * 0.18;
         mesh.position.z += ((1.50 + Math.cos(t * 0.74 + seed) * 0.08) - mesh.position.z) * 0.13;
         mesh.scale.setScalar(0.98 + beatPulse * 0.04);
         mesh.rotation.z = pendulumPhase * 0.18;
@@ -7656,8 +7710,8 @@ function updateStageLyrics3D(dt) {
       } else if (lyricSceneMode === 'drift') {
         mesh.userData.skullMouthMeshLocked = false;
         var driftPhase = t * 0.36 + seed;
-        mesh.position.x += ((Math.sin(driftPhase) * 0.78) - mesh.position.x) * 0.12;
-        mesh.position.y += ((0.16 + Math.cos(driftPhase * 1.24) * 0.24) - mesh.position.y) * 0.12;
+        mesh.position.x += ((Math.sin(driftPhase) * 1.05) - mesh.position.x) * 0.12;
+        mesh.position.y += ((0.16 + Math.cos(driftPhase * 1.24) * 0.32) - mesh.position.y) * 0.12;
         mesh.position.z += ((1.48 + Math.sin(driftPhase * 0.72) * 0.12) - mesh.position.z) * 0.10;
         mesh.scale.setScalar(0.97 + Math.sin(driftPhase * 0.82) * 0.05);
         mesh.rotation.z = Math.cos(driftPhase) * 0.065;
@@ -7673,8 +7727,8 @@ function updateStageLyrics3D(dt) {
         mesh.userData.skullMouthMeshLocked = false;
         var glideSide = Math.sin(seed * 7.17) >= 0 ? 1 : -1;
         var glideProgress = 1 - a;
-        mesh.position.x += ((glideSide * glideProgress * 0.98) - mesh.position.x) * 0.24;
-        mesh.position.y += ((0.18 - glideProgress * 0.22) - mesh.position.y) * 0.22;
+        mesh.position.x += ((glideSide * glideProgress * 1.25) - mesh.position.x) * 0.24;
+        mesh.position.y += ((0.18 - glideProgress * 0.30) - mesh.position.y) * 0.22;
         mesh.position.z += ((1.50 - glideProgress * 0.10) - mesh.position.z) * 0.15;
         mesh.scale.setScalar(0.92 + a * 0.08);
         mesh.rotation.z = -glideSide * glideProgress * 0.12;
@@ -7682,7 +7736,7 @@ function updateStageLyrics3D(dt) {
         mesh.userData.skullMouthMeshLocked = false;
         var pushSide = mesh.userData.pushDirection || 1;
         var pushEntry = (1 - a) * -pushSide;
-        mesh.position.x += ((pushEntry * 0.92) - mesh.position.x) * 0.30;
+        mesh.position.x += ((pushEntry * 1.20) - mesh.position.x) * 0.30;
         mesh.position.y += ((0.18 + pushEntry * 0.08) - mesh.position.y) * 0.24;
         mesh.position.z += ((1.50 - Math.abs(pushEntry) * 0.10) - mesh.position.z) * 0.20;
         mesh.scale.setScalar(0.92 + a * 0.08);
@@ -7704,9 +7758,9 @@ function updateStageLyrics3D(dt) {
       } else if (lyricSceneMode === 'float') {
         mesh.userData.skullMouthMeshLocked = false;
         mesh.scale.setScalar(0.88 + a * 0.12 + breathe + bass * 0.05);
-        mesh.position.x += ((Math.sin(t * 0.48 + seed) * 0.74) - mesh.position.x) * 0.11;
-        mesh.position.y += ((0.18 + Math.sin(t * 0.62 + seed) * 0.36) - mesh.position.y) * 0.11;
-        mesh.position.z += ((1.48 + Math.cos(t * 0.50 + seed) * 0.30) - mesh.position.z) * 0.11;
+        mesh.position.x += ((Math.sin(t * 0.48 + seed) * 0.98) - mesh.position.x) * 0.11;
+        mesh.position.y += ((0.18 + Math.sin(t * 0.62 + seed) * 0.48) - mesh.position.y) * 0.11;
+        mesh.position.z += ((1.48 + Math.cos(t * 0.50 + seed) * 0.38) - mesh.position.z) * 0.11;
         mesh.rotation.z = Math.sin(t * 0.39 + seed) * 0.075;
       } else {
         mesh.userData.skullMouthMeshLocked = false;
@@ -7782,12 +7836,61 @@ function updateStageLyrics3D(dt) {
       mesh.rotation.z += pushOut * dt * 0.72;
       return a < 1;
     }
+    var exitSeed = mesh.userData.floatSeed || 0;
+    var exitSide = Math.sin(exitSeed * 7.31) >= 0 ? 1 : -1;
+    var modeExit = true;
+    if (lyricSceneMode === 'float') {
+      mesh.position.x += exitSide * dt * 0.72;
+      mesh.position.y += dt * 1.05;
+      mesh.rotation.z += exitSide * dt * 0.42;
+    } else if (lyricSceneMode === 'slant' || lyricSceneMode === 'sweep' || lyricSceneMode === 'glide') {
+      mesh.position.x += exitSide * dt * 3.2;
+      mesh.position.y += exitSide * dt * 0.52;
+      mesh.rotation.z += exitSide * dt * 0.82;
+    } else if (lyricSceneMode === 'scatter') {
+      mesh.position.x += exitSide * dt * 2.5;
+      mesh.position.y += (Math.cos(exitSeed * 5.17) >= 0 ? 1 : -1) * dt * 1.7;
+      mesh.position.z -= dt * 0.82;
+      mesh.rotation.z += exitSide * dt * 1.05;
+    } else if (lyricSceneMode === 'orbit' || lyricSceneMode === 'pendulum') {
+      mesh.position.x += exitSide * dt * 2.25;
+      mesh.position.y -= dt * 0.92;
+      mesh.rotation.z += exitSide * dt * 0.92;
+    } else if (lyricSceneMode === 'wave' || lyricSceneMode === 'bounce') {
+      mesh.position.y += (lyricSceneMode === 'bounce' ? 1 : -1) * dt * 1.75;
+      mesh.position.x += exitSide * dt * 0.82;
+      mesh.rotation.z += exitSide * dt * 0.48;
+    } else if (lyricSceneMode === 'flip') {
+      mesh.position.z -= dt * 0.95;
+      mesh.rotation.y += exitSide * dt * 1.4;
+    } else if (lyricSceneMode === 'depth' || lyricSceneMode === 'pulse' || lyricSceneMode === 'stretch') {
+      mesh.position.z -= dt * (lyricSceneMode === 'depth' ? 2.7 : 1.25);
+      mesh.scale.setScalar(Math.max(0.76, 1 - a * (lyricSceneMode === 'pulse' ? 0.20 : 0.12)));
+    } else if (lyricSceneMode === 'geometry') {
+      mesh.position.x += exitSide * dt * 1.35;
+      mesh.position.y += dt * 1.15;
+      mesh.position.z -= dt * 0.72;
+      mesh.rotation.z += exitSide * dt * 1.18;
+    } else if (lyricSceneMode === 'drift') {
+      mesh.position.x += exitSide * dt * 1.45;
+      mesh.position.y += dt * 0.44;
+      mesh.rotation.z += exitSide * dt * 0.32;
+    } else {
+      modeExit = false;
+    }
+    if (modeExit) {
+      if (lyricSceneMode !== 'depth' && lyricSceneMode !== 'pulse' && lyricSceneMode !== 'stretch') mesh.scale.setScalar(0.98 - a * 0.07);
+      return a < 1;
+    }
     mesh.position.z -= dt * 0.26;
     mesh.position.y += dt * 0.08;
     mesh.scale.setScalar(0.98 - a * 0.06);
     return a < 1;
   }
   tickMesh(stageLyrics.current, true, 0);
+  if (stageLyrics.current && !skullMouthLyrics && normalizeLyricFlowMode(fx.lyricFlowMode) === 'auto') {
+    constrainCurrentLyricToViewport(stageLyrics.current);
+  }
   for (var i = stageLyrics.outgoing.length - 1; i >= 0; i--) {
     var stackIndex = stageLyrics.outgoing.length - i;
     if (!tickMesh(stageLyrics.outgoing[i], false, stackIndex)) {
@@ -20587,6 +20690,7 @@ function applyCustomBackground() {
   var root = document.documentElement;
   var layer = document.getElementById('custom-bg');
   var video = document.getElementById('custom-bg-video');
+  var mediaKey = hasVideo ? (media.id ? ('id:' + media.id) : ('src:' + String(media.src || '').slice(0, 220))) : '';
   root.style.setProperty('--custom-bg-color', color);
   document.body.classList.toggle('custom-background-override', override);
   document.body.classList.toggle('custom-background-flat', override && !hasVideo);
@@ -20602,8 +20706,19 @@ function applyCustomBackground() {
   if (!hasVideo) {
     video.pause();
     video.removeAttribute('src');
+    delete video.dataset.mediaKey;
     video.load();
     if (customBgObjectUrl) { URL.revokeObjectURL(customBgObjectUrl); customBgObjectUrl = ''; }
+    return;
+  }
+  video.muted = true;
+  video.loop = true;
+  video.playsInline = true;
+  if (mediaKey && video.dataset.mediaKey === mediaKey && video.getAttribute('src')) {
+    if (video.paused) {
+      var existingPlay = video.play();
+      if (existingPlay && existingPlay.catch) existingPlay.catch(function(){});
+    }
     return;
   }
   function setVideoSrc(src) {
@@ -20613,6 +20728,7 @@ function applyCustomBackground() {
       video.setAttribute('src', src);
       video.load();
     }
+    video.dataset.mediaKey = mediaKey;
     video.muted = true;
     video.loop = true;
     video.playsInline = true;
