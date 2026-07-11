@@ -43,6 +43,7 @@ var AUDIO_FADE_IN_MS = 460;
 var AUDIO_FADE_OUT_MS = 420;
 var AUDIO_SILENCE_GAIN = 0.0001;
 var userPlaylists = [], qqPlaylists = [], kugouPlaylists = [], myPodcastCollections = [], myPodcastItems = {}, playlistCoverCache = {};
+var playlistSourceFilter = '';
 var CUSTOM_COVER_STORE_KEY = 'mineradio-custom-covers';
 var CUSTOM_BACKGROUND_MEDIA_STORE_KEY = 'mineradio-custom-background-media-v1';
 var CUSTOM_LYRIC_STORE_KEY = 'mineradio-custom-lyrics-v1';
@@ -54,6 +55,7 @@ var PLAYBACK_QUALITY_STORE_KEY = 'mineradio-playback-quality-v1';
 var UPLOAD_TIP_STORE_KEY = 'mineradio-upload-tip-seen';
 var DIY_MODE_STORE_KEY = 'mineradio-diy-player-mode-v1';
 var PLAYLIST_PANEL_PIN_STORE_KEY = 'mineradio-playlist-panel-pinned-v1';
+var PLAYLIST_SOURCE_FILTER_STORE_KEY = 'mineradio-playlist-source-filter-v1';
 var USER_CAPSULE_AUTO_HIDE_STORE_KEY = 'mineradio-user-capsule-auto-hide-v1';
 var FX_FAB_AUTO_HIDE_STORE_KEY = 'mineradio-fx-fab-auto-hide-v1';
 var CONTROLS_AUTO_HIDE_STORE_KEY = 'mineradio-controls-auto-hide-v1';
@@ -63,6 +65,50 @@ var VISUAL_GUIDE_SEEN_STORE_KEY = 'mineradio-visual-guide-seen-v2';
 var LOCAL_BEATMAP_STORE_KEY = 'mineradio-local-beatmaps-v1';
 var LOCAL_BEAT_PREF_STORE_KEY = 'mineradio-local-beatmap-prefs-v1';
 var LOCAL_BEAT_COMBOS = ['', 'downbeat', 'push', 'drop', 'rebound', 'accent'];
+try { playlistSourceFilter = localStorage.getItem(PLAYLIST_SOURCE_FILTER_STORE_KEY) || ''; }
+catch (e) { playlistSourceFilter = ''; }
+
+function playlistSourceKey(pl) {
+  return pl && pl.provider === 'qq' ? 'qq' : (pl && pl.provider === 'kugou' ? 'kugou' : 'netease');
+}
+function availablePlaylistSources() {
+  var sources = [
+    { key: 'netease', label: '网易云', loggedIn: !!(loginStatus && loginStatus.loggedIn) },
+    { key: 'qq', label: 'QQ 音乐', loggedIn: !!(qqLoginStatus && qqLoginStatus.loggedIn) },
+    { key: 'kugou', label: '酷狗音乐', loggedIn: !!(kugouLoginStatus && kugouLoginStatus.loggedIn) }
+  ];
+  return sources.filter(function(source){
+    return source.loggedIn || userPlaylists.some(function(pl){ return playlistSourceKey(pl) === source.key; });
+  });
+}
+function normalizePlaylistSourceFilter() {
+  var sources = availablePlaylistSources();
+  if (!sources.length) return '';
+  if (!sources.some(function(source){ return source.key === playlistSourceFilter; })) playlistSourceFilter = sources[0].key;
+  return playlistSourceFilter;
+}
+function getFilteredUserPlaylists() {
+  var source = normalizePlaylistSourceFilter();
+  return source ? userPlaylists.filter(function(pl){ return playlistSourceKey(pl) === source; }) : [];
+}
+function renderPlaylistSourceFilter() {
+  var el = document.getElementById('playlist-source-filter');
+  if (!el) return;
+  var sources = availablePlaylistSources();
+  var active = normalizePlaylistSourceFilter();
+  el.style.display = sources.length ? '' : 'none';
+  el.innerHTML = sources.map(function(source){
+    return '<button type="button" role="tab" aria-selected="' + (source.key === active ? 'true' : 'false') + '" class="' + (source.key === active ? 'active' : '') + '" data-playlist-source="' + source.key + '" onclick="setPlaylistSourceFilter(\'' + source.key + '\')">' + source.label + '</button>';
+  }).join('');
+}
+function setPlaylistSourceFilter(source) {
+  if (!availablePlaylistSources().some(function(item){ return item.key === source; })) return;
+  playlistSourceFilter = source;
+  try { localStorage.setItem(PLAYLIST_SOURCE_FILTER_STORE_KEY, source); } catch (e) {}
+  playlistPanelDetailState = { key: '', loading: false, playlist: null, tracks: [], token: (playlistPanelDetailState.token || 0) + 1, renderLimit: PLAYLIST_DETAIL_INITIAL_RENDER };
+  resetPlaylistPanelRenderLimit();
+  renderUserPlaylistsList({ animate: true, reset: true });
+}
 var HOTKEY_ACTIONS = [
   { key:'togglePlay', label:'播放 / 暂停', category:'播放', local:'Space', global:'Ctrl+Alt+Space' },
   { key:'prevTrack', label:'上一首', category:'播放', local:'ArrowLeft', global:'Ctrl+Alt+ArrowLeft' },
@@ -824,6 +870,10 @@ function isHiddenForBackgroundOptimization() {
 function isVisibleBackgroundMode() {
   return false;
 }
+function syncElectronBackgroundThrottling() {
+  if (!window.desktopWindow || typeof window.desktopWindow.setBackgroundKeepEnabled !== 'function') return;
+  window.desktopWindow.setBackgroundKeepEnabled(isLiveBackgroundKeepMode()).catch(function(){});
+}
 function updateRenderPowerClasses() {
   document.body.classList.toggle('render-deep-sleep', isDeepBackgroundMode());
   document.body.classList.toggle('render-background-eco', isVisibleBackgroundMode());
@@ -1055,6 +1105,7 @@ function updateDesktopRuntimeState(state) {
 }
 function installRenderPowerHooks() {
   updateRenderPowerClasses();
+  syncElectronBackgroundThrottling();
   document.addEventListener('visibilitychange', function(){
     updateRenderPowerClasses();
     applyRendererPowerMode();
@@ -1091,13 +1142,13 @@ var RENDER_DPR_CAP = 1.35;
 var RENDER_PIXEL_BUDGET = 5200000;
 var RENDER_MIN_DPR = 0.72;
 // 0 = display vsync. Keep visible playback high-refresh capable instead of capping 120Hz+ screens to 60/72.
-var RENDER_VISIBLE_VSYNC = true;
-var RENDER_ACTIVE_FPS = 0;
-var RENDER_LARGE_FPS = 0;
-var RENDER_HUGE_FPS = 0;
-var RENDER_INTERACTION_FPS = 0;
-var RENDER_INTERACTION_LARGE_FPS = 0;
-var RENDER_INTERACTION_HUGE_FPS = 0;
+var RENDER_VISIBLE_VSYNC = false;
+var RENDER_ACTIVE_FPS = 60;
+var RENDER_LARGE_FPS = 48;
+var RENDER_HUGE_FPS = 36;
+var RENDER_INTERACTION_FPS = 72;
+var RENDER_INTERACTION_LARGE_FPS = 60;
+var RENDER_INTERACTION_HUGE_FPS = 48;
 var RENDER_INTERACTION_HOLD_MS = 900;
 var renderInteractionBoostUntil = 0;
 var renderInteractionReason = '';
@@ -19070,8 +19121,9 @@ function resetPlaylistPanelRenderLimit() {
   playlistPanelRenderLimit = PLAYLIST_PANEL_BATCH_SIZE;
 }
 function growPlaylistPanelRenderLimit() {
-  if (!userPlaylists.length) return;
-  var next = Math.min(userPlaylists.length, (playlistPanelRenderLimit || PLAYLIST_PANEL_BATCH_SIZE) + PLAYLIST_PANEL_BATCH_SIZE);
+  var visiblePlaylists = getFilteredUserPlaylists();
+  if (!visiblePlaylists.length) return;
+  var next = Math.min(visiblePlaylists.length, (playlistPanelRenderLimit || PLAYLIST_PANEL_BATCH_SIZE) + PLAYLIST_PANEL_BATCH_SIZE);
   if (next <= playlistPanelRenderLimit) return;
   playlistPanelRenderLimit = next;
   renderUserPlaylistsList({ animate: true });
@@ -19082,7 +19134,7 @@ function bindPlaylistPanelLazyRender() {
   playlistPanelLazyBound = true;
   panel.addEventListener('scroll', function(){
     maybeGrowPlaylistPanelDetailRenderLimit();
-    if (queueViewTab !== 'playlists' || playlistPanelRenderLimit >= userPlaylists.length) return;
+    if (queueViewTab !== 'playlists' || playlistPanelRenderLimit >= getFilteredUserPlaylists().length) return;
     if (panel.scrollTop + panel.clientHeight >= panel.scrollHeight - 180) growPlaylistPanelRenderLimit();
   }, { passive: true });
 }
@@ -20947,6 +20999,7 @@ function setPerformanceBackgroundMode(mode, silent) {
   updatePerformanceControls();
   saveLyricLayout();
   updateRenderPowerClasses();
+  syncElectronBackgroundThrottling();
   applyRendererPowerMode();
   if (next === 'keep') recoverVisualsAfterBackground('performance-background-keep');
   else if (next === 'release' && isDeepBackgroundMode()) trimRuntimeCaches('performance-release', true);
@@ -21926,6 +21979,7 @@ function toggleFx(key) {
       backgroundCacheTrimTimer = 0;
     }
     updateRenderPowerClasses();
+    syncElectronBackgroundThrottling();
     applyRendererPowerMode();
     if (fx.liveBackgroundKeep) recoverVisualsAfterBackground('live-background-keep');
   }
@@ -27052,8 +27106,9 @@ function resetPlaylistPanelRenderLimit() {
   playlistPanelRenderLimit = PLAYLIST_PANEL_BATCH_SIZE;
 }
 function growPlaylistPanelRenderLimit() {
-  if (!userPlaylists.length) return;
-  var next = Math.min(userPlaylists.length, (playlistPanelRenderLimit || PLAYLIST_PANEL_BATCH_SIZE) + PLAYLIST_PANEL_BATCH_SIZE);
+  var visiblePlaylists = getFilteredUserPlaylists();
+  if (!visiblePlaylists.length) return;
+  var next = Math.min(visiblePlaylists.length, (playlistPanelRenderLimit || PLAYLIST_PANEL_BATCH_SIZE) + PLAYLIST_PANEL_BATCH_SIZE);
   if (next <= playlistPanelRenderLimit) return;
   playlistPanelRenderLimit = next;
   renderUserPlaylistsList({ animate: true });
@@ -27064,7 +27119,7 @@ function bindPlaylistPanelLazyRender() {
   playlistPanelLazyBound = true;
   panel.addEventListener('scroll', function(){
     maybeGrowPlaylistPanelDetailRenderLimit();
-    if (queueViewTab !== 'playlists' || playlistPanelRenderLimit >= userPlaylists.length) return;
+    if (queueViewTab !== 'playlists' || playlistPanelRenderLimit >= getFilteredUserPlaylists().length) return;
     if (panel.scrollTop + panel.clientHeight >= panel.scrollHeight - 180) growPlaylistPanelRenderLimit();
   }, { passive: true });
 }
@@ -27072,7 +27127,9 @@ function renderUserPlaylistsList(opts) {
   opts = opts || {};
   var $pl = document.getElementById('pl-list');
   var seq = ++playlistRenderSeq;
-  if (!userPlaylists.length) {
+  renderPlaylistSourceFilter();
+  var filteredPlaylists = getFilteredUserPlaylists();
+  if (!filteredPlaylists.length) {
     $pl.innerHTML = '<div style="text-align:center;padding:24px 0;color:rgba(255,255,255,.32);font-size:11.5px">未找到歌单</div>';
     return;
   }
@@ -27089,12 +27146,12 @@ function renderUserPlaylistsList(opts) {
     '</div>' + playlistPanelDetailHtml(pl, provider);
   }
   var groups = [
-    { key:'netease', label:'Netease Playlists', items:userPlaylists.filter(function(pl){ return pl.provider !== 'qq' && pl.provider !== 'kugou'; }) },
-    { key:'qq', label:'QQ Music Playlists', items:userPlaylists.filter(function(pl){ return pl.provider === 'qq'; }) },
-    { key:'kugou', label:'Kugou Playlists', items:userPlaylists.filter(function(pl){ return pl.provider === 'kugou'; }) }
-  ];
+    { key:'netease', label:'网易云歌单', items:filteredPlaylists.filter(function(pl){ return playlistSourceKey(pl) === 'netease'; }) },
+    { key:'qq', label:'QQ 音乐歌单', items:filteredPlaylists.filter(function(pl){ return playlistSourceKey(pl) === 'qq'; }) },
+    { key:'kugou', label:'酷狗音乐歌单', items:filteredPlaylists.filter(function(pl){ return playlistSourceKey(pl) === 'kugou'; }) }
+  ].filter(function(group){ return group.key === playlistSourceFilter; });
   if (opts.reset) resetPlaylistPanelRenderLimit();
-  playlistPanelRenderLimit = Math.max(PLAYLIST_PANEL_BATCH_SIZE, Math.min(userPlaylists.length, playlistPanelRenderLimit || PLAYLIST_PANEL_BATCH_SIZE));
+  playlistPanelRenderLimit = Math.max(PLAYLIST_PANEL_BATCH_SIZE, Math.min(filteredPlaylists.length, playlistPanelRenderLimit || PLAYLIST_PANEL_BATCH_SIZE));
   var renderedCount = 0;
   function visibleGroupItems(items) {
     var room = playlistPanelRenderLimit - renderedCount;
@@ -27108,8 +27165,8 @@ function renderUserPlaylistsList(opts) {
     if (!items.length) return '';
     return '<div class="pl-section-label">' + group.label + '</div>' + items.map(playlistCardHtml).join('');
   }).join('') || '<div style="text-align:center;padding:24px 0;color:rgba(255,255,255,.32);font-size:11.5px">未找到歌单</div>';
-  if (userPlaylists.length > renderedCount) {
-    $pl.insertAdjacentHTML('beforeend', '<button type="button" class="fx-mini-btn ghost pl-load-more" data-pl-load-more="1">加载更多 ' + renderedCount + '/' + userPlaylists.length + '</button>');
+  if (filteredPlaylists.length > renderedCount) {
+    $pl.insertAdjacentHTML('beforeend', '<button type="button" class="fx-mini-btn ghost pl-load-more" data-pl-load-more="1">加载更多 ' + renderedCount + '/' + filteredPlaylists.length + '</button>');
   }
   if (opts.animate && seq === playlistRenderSeq) animateVisiblePanelList($pl, '.pl-card', document.getElementById('playlist-panel'));
 }

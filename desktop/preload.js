@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('desktopWindow', {
   toggleFullscreen: () => ipcRenderer.invoke('desktop-window-toggle-fullscreen'),
   exitFullscreenWindowed: () => ipcRenderer.invoke('desktop-window-exit-fullscreen-windowed'),
   getState: () => ipcRenderer.invoke('desktop-window-get-state'),
+  setBackgroundKeepEnabled: (enabled) => ipcRenderer.invoke('mineradio-background-keep-set', !!enabled),
   close: () => ipcRenderer.invoke('desktop-window-close'),
   openNeteaseMusicLogin: () => ipcRenderer.invoke('netease-music-open-login'),
   clearNeteaseMusicLogin: () => ipcRenderer.invoke('netease-music-clear-login'),

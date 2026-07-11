@@ -166,10 +166,6 @@ const CHROMIUM_PERFORMANCE_SWITCHES = [
   ['enable-oop-rasterization'],
   ['enable-zero-copy'],
   ['enable-accelerated-2d-canvas'],
-  ['disable-background-timer-throttling'],
-  ['disable-renderer-backgrounding'],
-  ['disable-backgrounding-occluded-windows'],
-  ['force_high_performance_gpu'],
   ['use-gl', 'angle'],
   ['use-angle', getAngleBackend()],
 ];
@@ -1540,6 +1536,13 @@ ipcMain.handle('desktop-window-get-state', (event) => {
   return getWindowState(getSenderWindow(event));
 });
 
+ipcMain.handle('mineradio-background-keep-set', (event, enabled) => {
+  const win = getSenderWindow(event);
+  if (!win || win.isDestroyed() || win.webContents.isDestroyed()) return { ok: false };
+  win.webContents.setBackgroundThrottling(!enabled);
+  return { ok: true, backgroundThrottling: win.webContents.getBackgroundThrottling() };
+});
+
 ipcMain.handle('desktop-window-close', (event) => {
   getSenderWindow(event)?.close();
 });
@@ -1824,7 +1827,7 @@ async function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
-      backgroundThrottling: false,
+      backgroundThrottling: true,
     },
   });
 

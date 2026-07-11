@@ -117,7 +117,7 @@
     "qrcode": "^1.5.4"
   },
   "devDependencies": {
-    "electron": "^42.4.1",
+    "electron": "^43.1.0",
     "electron-builder": "^26.15.3",
     "rcedit": "^5.0.2"
   }
