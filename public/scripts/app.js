@@ -23356,8 +23356,8 @@ function updateUserModalUi() {
   if (addQQ) addQQ.textContent = hasPlatformLogin('qq') ? '查看 QQ 音乐' : '补登 QQ 音乐';
   if (logoutBtn) logoutBtn.textContent = activeAccountProvider === 'qq' ? '退出 QQ 音乐' : '退出网易云';
   if (hint) hint.textContent = dualAccountMode
-    ? '右上角已切换为双平台并排展示。'
-    : '可切换右上角展示的平台；“我两个都要”会并排放两个登录状态。';
+    ? '已显示全部登录平台。'
+    : '可切换账号平台，或显示全部已登录平台。';
 }
 function showUserModal() {
   if (!hasAnyPlatformLogin()) return showLoginModal();
@@ -23392,7 +23392,7 @@ function enableDualAccountView() {
   dualAccountMode = true;
   renderUserBtn();
   updateUserModalUi();
-  showToast('已启用双平台账号展示');
+  showToast('已启用全部账号展示');
 }
 function requestDualLoginMode() {
   enableDualAccountView();
@@ -28120,7 +28120,7 @@ function updateUserModalUi() {
       vipEl.textContent = 'UID: ' + ((st && st.userId) || '-') + '  ·  ' + vipLabel;
       vipEl.style.color = hasProviderVip('netease', st) ? 'rgba(244,210,138,0.86)' : 'rgba(255,255,255,0.5)';
     } else if (activeAccountProvider === 'kugou') {
-      var kgVipLabel = hasProviderVip('kugou', st) ? 'Kugou VIP' : 'Kugou Session';
+      var kgVipLabel = hasProviderVip('kugou', st) ? '酷狗 VIP 会员' : '酷狗音乐会话';
       vipEl.textContent = 'UID: ' + ((st && st.userId) || '-') + '  ·  ' + kgVipLabel;
       vipEl.style.color = hasProviderVip('kugou', st) ? 'rgba(68,199,255,0.86)' : 'rgba(68,199,255,0.58)';
     } else {
@@ -28134,12 +28134,12 @@ function updateUserModalUi() {
     if (btn) btn.classList.toggle('active', key === 'both' ? dualAccountMode : (!dualAccountMode && activeAccountProvider === key));
   });
   if (addNetease) addNetease.style.display = hasPlatformLogin('netease') ? 'none' : '';
-  if (addQQ) addQQ.textContent = hasPlatformLogin('qq') ? 'QQ Music' : 'Add QQ Music';
-  if (addKugou) addKugou.textContent = hasPlatformLogin('kugou') ? 'Kugou' : 'Add Kugou';
-  if (logoutBtn) logoutBtn.textContent = activeAccountProvider === 'qq' ? 'Logout QQ Music' : (activeAccountProvider === 'kugou' ? 'Logout Kugou' : 'Logout Netease');
+  if (addQQ) addQQ.textContent = hasPlatformLogin('qq') ? '查看 QQ 音乐' : '补登 QQ 音乐';
+  if (addKugou) addKugou.textContent = hasPlatformLogin('kugou') ? '查看酷狗音乐' : '补登酷狗音乐';
+  if (logoutBtn) logoutBtn.textContent = activeAccountProvider === 'qq' ? '退出 QQ 音乐' : (activeAccountProvider === 'kugou' ? '退出酷狗音乐' : '退出网易云');
   if (hint) hint.textContent = dualAccountMode
-    ? 'Showing all logged-in platforms.'
-    : 'Switch account provider here, or show all logged-in platforms.';
+    ? '已显示全部登录平台。'
+    : '可切换账号平台，或显示全部已登录平台。';
 }
 function showUserModal() {
   if (!hasAnyPlatformLogin()) return showLoginModal();
