@@ -46,6 +46,7 @@ var userPlaylists = [], qqPlaylists = [], kugouPlaylists = [], myPodcastCollecti
 var playlistSourceFilter = '';
 var CUSTOM_COVER_STORE_KEY = 'mineradio-custom-covers';
 var CUSTOM_BACKGROUND_MEDIA_STORE_KEY = 'mineradio-custom-background-media-v1';
+var GLOBAL_BACKGROUND_MEDIA_STORE_KEY = 'mineradio-global-background-media-v1';
 var CUSTOM_LYRIC_STORE_KEY = 'mineradio-custom-lyrics-v1';
 var CUSTOM_LYRIC_PREF_STORE_KEY = 'mineradio-custom-lyric-prefs-v1';
 var LYRIC_LAYOUT_STORE_KEY = 'mineradio-lyric-layout-v1';
@@ -123,6 +124,7 @@ var hotkeyGlobalStatus = {};
 var diyPlayerMode = readDiyModePreference();
 var customCoverMap = readCustomCoverMap();
 var customBackgroundMediaMap = readCustomBackgroundMediaMap();
+var globalBackgroundMedia = readGlobalBackgroundMedia();
 var customLyricMap = readCustomLyricMap();
 var customLyricPrefs = readCustomLyricPrefs();
 var localBeatMapCache = readLocalBeatMapCache();
@@ -786,6 +788,8 @@ function readSavedPlaybackVisualPreset() {
 var playbackVisualPreset = readSavedPlaybackVisualPreset();
 var startupVisualPreviewActive = false;
 var fx = Object.assign({}, fxDefaults, readSavedLyricLayout());
+// 摄像头属于会话级权限能力：每次启动必须由用户主动开启，不能从布局或存档自动恢复。
+fx.cam = 'off';
 normalizeDevelopmentLockedFxState();
 var legacyBackgroundMediaForMigration = normalizeCustomBackgroundMedia(fx.backgroundMedia || fx.backgroundImage);
 var presetTransition = { active:false, start:-10, duration:0.92, from:0, to:0 };
@@ -5480,7 +5484,7 @@ function isCascadeLyricFlow() {
   var mode = fx && normalizeLyricFlowMode(fx.lyricFlowMode);
   return mode === 'cascade' || mode === 'cloud' || mode === 'network';
 }
-var LYRIC_SCENE_MODES = ['float', 'hero', 'slant', 'cloud', 'network', 'geometry'];
+var LYRIC_SCENE_MODES = ['float', 'slant', 'cloud', 'network', 'geometry', 'scatter', 'stretch', 'orbit', 'wave', 'flip', 'sweep', 'bounce', 'pendulum', 'depth', 'drift', 'pulse', 'glide', 'push'];
 function resolvedLyricFlowMode(advance) {
   var selected = normalizeLyricFlowMode(fx && fx.lyricFlowMode);
   if (selected !== 'auto') return selected;
@@ -5490,7 +5494,7 @@ function resolvedLyricFlowMode(advance) {
     var index = Math.floor(Math.random() * LYRIC_SCENE_MODES.length);
     if (LYRIC_SCENE_MODES[index] === previous) index = (index + 1) % LYRIC_SCENE_MODES.length;
     stageLyrics.autoFlowMode = LYRIC_SCENE_MODES[index];
-    stageLyrics.autoFlowLinesRemaining = 2 + Math.floor(Math.random() * 5);
+    stageLyrics.autoFlowLinesRemaining = 1 + Math.floor(Math.random() * 3);
   }
   return stageLyrics.autoFlowMode;
 }
@@ -5807,7 +5811,8 @@ function normalizePerformanceQuality(v) {
 }
 function normalizeLyricFlowMode(value) {
   value = String(value || '');
-  return /^(single|cascade|auto|float|hero|slant|cloud|network|geometry)$/.test(value) ? value : 'single';
+  if (/^(float|hero|slant|cloud|network|geometry|scatter|stretch|orbit|wave|flip|sweep|bounce|pendulum|depth|drift|pulse|glide|push)$/.test(value)) return 'auto';
+  return /^(single|cascade|auto)$/.test(value) ? value : 'single';
 }
 function coverParticleGridForResolution(v) {
   var grid = Math.round(118 * normalizeCoverResolution(v));
@@ -5923,7 +5928,7 @@ function readSavedLyricLayout() {
       shelfOpacity: clampRange(raw.shelfOpacity == null ? fxDefaults.shelfOpacity : Number(raw.shelfOpacity), 0.25, 1),
       shelfBgOpacity: clampRange(raw.shelfBgOpacity == null ? fxDefaults.shelfBgOpacity : Number(raw.shelfBgOpacity), 0.25, 0.98),
       shelfAccentColor: normalizeHexColor(raw.shelfAccentColor || fxDefaults.shelfAccentColor, fxDefaults.shelfAccentColor),
-      cam: /^(off|gesture)$/.test(String(raw.cam || '')) ? raw.cam : fxDefaults.cam
+      cam: 'off'
     };
   } catch (e) {
     return {};
@@ -6014,7 +6019,7 @@ function saveLyricLayout() {
       shelfOpacity: clampRange(fx.shelfOpacity == null ? fxDefaults.shelfOpacity : Number(fx.shelfOpacity), 0.25, 1),
       shelfBgOpacity: clampRange(fx.shelfBgOpacity == null ? fxDefaults.shelfBgOpacity : Number(fx.shelfBgOpacity), 0.25, 0.98),
       shelfAccentColor: normalizeHexColor(fx.shelfAccentColor || fxDefaults.shelfAccentColor, fxDefaults.shelfAccentColor),
-      cam: /^(off|gesture)$/.test(String(fx.cam || '')) ? fx.cam : fxDefaults.cam
+      cam: 'off'
     }));
   } catch (e) {}
 }
@@ -7109,7 +7114,7 @@ function buildLyricMesh(text, flowMode) {
   text = String(text || '').replace(/\s+/g, ' ').trim();
   var mask = makeLyricMask(text);
   var pal = stageLyrics.palette;
-  flowMode = normalizeLyricFlowMode(flowMode || fx.lyricFlowMode);
+  flowMode = String(flowMode || fx.lyricFlowMode || 'single');
   var cascadeMode = flowMode === 'cascade' || flowMode === 'cloud' || flowMode === 'network';
   var worldW = 6.10;
   var worldH = worldW * (mask.height / mask.width);
@@ -7252,10 +7257,14 @@ function showStageLine(text, redrawOnly) {
   if (!text) { clearStageLyrics(); return; }
   var resolvedMode = resolvedLyricFlowMode(!redrawOnly);
   var cascadeMode = resolvedMode === 'cascade' || resolvedMode === 'cloud' || resolvedMode === 'network';
+  var pushDirection = resolvedMode === 'push'
+    ? (redrawOnly && stageLyrics.current ? (stageLyrics.current.userData.pushDirection || 1) : (Math.random() < 0.5 ? -1 : 1))
+    : 0;
   if (redrawOnly && stageLyrics.current) {
     disposeLyricMesh(stageLyrics.current);
     stageLyrics.current = null;
   } else if (stageLyrics.current) {
+    if (pushDirection) stageLyrics.current.userData.pushOutDirection = pushDirection;
     stageLyrics.current.userData.state = cascadeMode ? 'cascade' : 'out';
     stageLyrics.current.userData.age = 0;
     stageLyrics.current.userData.cascadeLife = 0;
@@ -7269,6 +7278,7 @@ function showStageLine(text, redrawOnly) {
   var mesh = buildLyricMesh(text, resolvedMode);
   mesh.userData.resolvedFlowMode = resolvedMode;
   mesh.userData.flowMode = resolvedMode;
+  mesh.userData.pushDirection = pushDirection;
   stageLyrics.group.add(mesh);
   stageLyrics.current = mesh;
 }
@@ -7536,30 +7546,133 @@ function updateStageLyrics3D(dt) {
         }
         mesh.scale.setScalar(mouthMeshScale);
         mesh.rotation.z = Math.sin(t * 0.30 + seed) * 0.010;
-      } else if (lyricSceneMode === 'hero') {
-        mesh.userData.skullMouthMeshLocked = false;
-        var heroScale = 1.18 + a * 0.22 + bass * 0.075 + beatPulse * 0.035;
-        mesh.scale.setScalar(heroScale);
-        mesh.position.x += (0 - mesh.position.x) * 0.18;
-        mesh.position.y += ((0.14 + Math.sin(t * 0.42 + seed) * 0.025) - mesh.position.y) * 0.14;
-        mesh.position.z += ((1.52 + Math.cos(t * 0.31 + seed) * 0.035) - mesh.position.z) * 0.12;
-        mesh.rotation.z *= 0.82;
       } else if (lyricSceneMode === 'slant') {
         mesh.userData.skullMouthMeshLocked = false;
         var slantSide = Math.sin(seed * 8.71) >= 0 ? 1 : -1;
-        mesh.position.x += ((slantSide * (0.34 - a * 0.28) + Math.sin(t * 0.34 + seed) * 0.08) - mesh.position.x) * 0.16;
+        mesh.position.x += ((slantSide * (0.82 - a * 0.62) + Math.sin(t * 0.34 + seed) * 0.14) - mesh.position.x) * 0.20;
         mesh.position.y += ((0.18 + Math.cos(t * 0.48 + seed) * 0.06) - mesh.position.y) * 0.12;
         mesh.position.z += ((1.48 + Math.sin(t * 0.25 + seed) * 0.08) - mesh.position.z) * 0.10;
         mesh.scale.setScalar(0.98 + a * 0.08 + bass * 0.04);
-        mesh.rotation.z = slantSide * (-0.10 + Math.sin(t * 0.40 + seed) * 0.025);
+        mesh.rotation.z = slantSide * (-0.22 + Math.sin(t * 0.40 + seed) * 0.045);
       } else if (lyricSceneMode === 'geometry') {
         mesh.userData.skullMouthMeshLocked = false;
         var geoPulse = 1 + Math.max(stageLyrics.beatGlow, beatPulse) * 0.09;
         mesh.position.x += ((Math.sin(t * 0.62 + seed) * 0.16) - mesh.position.x) * 0.12;
         mesh.position.y += ((0.18 + Math.cos(t * 0.78 + seed) * 0.10) - mesh.position.y) * 0.12;
         mesh.position.z += ((1.46 + Math.sin(t * 0.51 + seed) * 0.10) - mesh.position.z) * 0.10;
-        mesh.scale.set(geoPulse * (0.94 + a * 0.06), geoPulse * (0.88 + a * 0.10), 1);
-        mesh.rotation.z = Math.sin(t * 0.72 + seed) * 0.075;
+        mesh.scale.setScalar(geoPulse * (0.94 + a * 0.06));
+        mesh.rotation.z = Math.sin(t * 0.72 + seed) * 0.16;
+      } else if (lyricSceneMode === 'scatter') {
+        mesh.userData.skullMouthMeshLocked = false;
+        var scatterX = Math.sin(seed * 11.7) * 0.95;
+        var scatterY = 0.16 + Math.cos(seed * 7.9) * 0.46;
+        mesh.position.x += (scatterX - mesh.position.x) * 0.22;
+        mesh.position.y += (scatterY - mesh.position.y) * 0.20;
+        mesh.position.z += ((1.35 + Math.sin(seed * 5.3) * 0.32) - mesh.position.z) * 0.16;
+        mesh.scale.setScalar(0.72 + a * 0.34 + beatPulse * 0.08);
+        mesh.rotation.z = Math.sin(seed * 6.2) * 0.28;
+      } else if (lyricSceneMode === 'stretch') {
+        mesh.userData.skullMouthMeshLocked = false;
+        var stretchBeat = Math.max(beatPulse, stageLyrics.beatGlow * 0.65);
+        mesh.position.x += (0 - mesh.position.x) * 0.20;
+        mesh.position.y += ((0.16 + Math.sin(t * 0.52 + seed) * 0.05) - mesh.position.y) * 0.16;
+        mesh.position.z += ((1.52 + Math.cos(t * 0.34 + seed) * 0.05) - mesh.position.z) * 0.14;
+        var stretchScale = 0.96 + a * 0.08 + stretchBeat * 0.08;
+        mesh.scale.set(stretchScale * 1.08, stretchScale * 0.96, 1);
+        mesh.rotation.z = 0;
+      } else if (lyricSceneMode === 'orbit') {
+        mesh.userData.skullMouthMeshLocked = false;
+        var orbitPhase = t * 0.72 + seed;
+        mesh.position.x += ((Math.sin(orbitPhase) * 0.72) - mesh.position.x) * 0.15;
+        mesh.position.y += ((0.16 + Math.cos(orbitPhase) * 0.34) - mesh.position.y) * 0.15;
+        mesh.position.z += ((1.46 + Math.sin(orbitPhase * 0.72) * 0.24) - mesh.position.z) * 0.13;
+        mesh.scale.setScalar(0.78 + (Math.cos(orbitPhase) + 1) * 0.18 + beatPulse * 0.05);
+        mesh.rotation.z = Math.sin(orbitPhase * 0.64) * 0.18;
+      } else if (lyricSceneMode === 'wave') {
+        mesh.userData.skullMouthMeshLocked = false;
+        var wavePhase = t * 1.18 + seed;
+        mesh.position.x += ((Math.sin(wavePhase) * 0.48) - mesh.position.x) * 0.18;
+        mesh.position.y += ((0.16 + Math.sin(wavePhase * 1.42) * 0.30) - mesh.position.y) * 0.18;
+        mesh.position.z += ((1.48 + Math.cos(wavePhase) * 0.14) - mesh.position.z) * 0.14;
+        mesh.scale.setScalar(0.98 + Math.sin(wavePhase) * 0.08);
+        mesh.rotation.z = Math.cos(wavePhase) * 0.14;
+      } else if (lyricSceneMode === 'flip') {
+        mesh.userData.skullMouthMeshLocked = false;
+        var flipPhase = Math.sin(t * 1.35 + seed);
+        mesh.position.x += (0 - mesh.position.x) * 0.22;
+        mesh.position.y += ((0.16 + Math.cos(t * 0.68 + seed) * 0.08) - mesh.position.y) * 0.18;
+        mesh.position.z += ((1.50 + Math.abs(flipPhase) * 0.18) - mesh.position.z) * 0.16;
+        mesh.scale.setScalar(0.94 + Math.abs(flipPhase) * 0.08);
+        mesh.rotation.y = flipPhase * 0.34;
+        mesh.rotation.z = Math.sin(t * 0.44 + seed) * 0.04;
+      } else if (lyricSceneMode === 'sweep') {
+        mesh.userData.skullMouthMeshLocked = false;
+        var sweepSide = Math.sin(seed * 4.13) >= 0 ? 1 : -1;
+        var sweepX = sweepSide * (1.12 - a * 1.02);
+        mesh.position.x += (sweepX - mesh.position.x) * 0.28;
+        mesh.position.y += ((0.18 + sweepSide * 0.16) - mesh.position.y) * 0.22;
+        mesh.position.z += ((1.54 - Math.abs(sweepX) * 0.16) - mesh.position.z) * 0.18;
+        mesh.scale.setScalar(0.78 + a * 0.34 + beatPulse * 0.05);
+        mesh.rotation.z = -sweepSide * (0.26 - a * 0.20);
+      } else if (lyricSceneMode === 'bounce') {
+        mesh.userData.skullMouthMeshLocked = false;
+        var bouncePhase = Math.abs(Math.sin(t * 1.55 + seed));
+        var bounceBeat = Math.max(bouncePhase * 0.72, beatPulse);
+        mesh.position.x += ((Math.sin(t * 0.58 + seed) * 0.22) - mesh.position.x) * 0.18;
+        mesh.position.y += ((-0.08 + bouncePhase * 0.58) - mesh.position.y) * 0.24;
+        mesh.position.z += ((1.45 + bouncePhase * 0.18) - mesh.position.z) * 0.18;
+        mesh.scale.setScalar(0.94 + bounceBeat * 0.10);
+        mesh.rotation.z = Math.sin(t * 0.76 + seed) * 0.11;
+      } else if (lyricSceneMode === 'pendulum') {
+        mesh.userData.skullMouthMeshLocked = false;
+        var pendulumPhase = Math.sin(t * 0.74 + seed);
+        mesh.position.x += ((pendulumPhase * 0.54) - mesh.position.x) * 0.15;
+        mesh.position.y += ((0.22 - Math.abs(pendulumPhase) * 0.10) - mesh.position.y) * 0.15;
+        mesh.position.z += ((1.50 + Math.cos(t * 0.74 + seed) * 0.08) - mesh.position.z) * 0.13;
+        mesh.scale.setScalar(0.98 + beatPulse * 0.04);
+        mesh.rotation.z = pendulumPhase * 0.13;
+      } else if (lyricSceneMode === 'depth') {
+        mesh.userData.skullMouthMeshLocked = false;
+        var depthPhase = 0.5 + 0.5 * Math.sin(t * 0.66 + seed);
+        mesh.position.x += ((Math.sin(t * 0.31 + seed) * 0.16) - mesh.position.x) * 0.14;
+        mesh.position.y += ((0.18 + Math.cos(t * 0.42 + seed) * 0.08) - mesh.position.y) * 0.14;
+        mesh.position.z += ((1.26 + depthPhase * 0.42) - mesh.position.z) * 0.15;
+        mesh.scale.setScalar(0.88 + depthPhase * 0.20);
+        mesh.rotation.z = Math.sin(t * 0.28 + seed) * 0.04;
+      } else if (lyricSceneMode === 'drift') {
+        mesh.userData.skullMouthMeshLocked = false;
+        var driftPhase = t * 0.36 + seed;
+        mesh.position.x += ((Math.sin(driftPhase) * 0.62) - mesh.position.x) * 0.10;
+        mesh.position.y += ((0.16 + Math.cos(driftPhase * 1.24) * 0.18) - mesh.position.y) * 0.10;
+        mesh.position.z += ((1.48 + Math.sin(driftPhase * 0.72) * 0.12) - mesh.position.z) * 0.10;
+        mesh.scale.setScalar(0.97 + Math.sin(driftPhase * 0.82) * 0.05);
+        mesh.rotation.z = Math.cos(driftPhase) * 0.065;
+      } else if (lyricSceneMode === 'pulse') {
+        mesh.userData.skullMouthMeshLocked = false;
+        var pulseDrive = Math.max(beatPulse, stageLyrics.beatGlow * 0.58);
+        mesh.position.x += (0 - mesh.position.x) * 0.20;
+        mesh.position.y += ((0.18 + pulseDrive * 0.09) - mesh.position.y) * 0.18;
+        mesh.position.z += ((1.48 + pulseDrive * 0.14) - mesh.position.z) * 0.16;
+        mesh.scale.setScalar(0.96 + pulseDrive * 0.16);
+        mesh.rotation.z = Math.sin(t * 0.38 + seed) * 0.035;
+      } else if (lyricSceneMode === 'glide') {
+        mesh.userData.skullMouthMeshLocked = false;
+        var glideSide = Math.sin(seed * 7.17) >= 0 ? 1 : -1;
+        var glideProgress = 1 - a;
+        mesh.position.x += ((glideSide * glideProgress * 0.78) - mesh.position.x) * 0.20;
+        mesh.position.y += ((0.18 - glideProgress * 0.16) - mesh.position.y) * 0.18;
+        mesh.position.z += ((1.50 - glideProgress * 0.10) - mesh.position.z) * 0.15;
+        mesh.scale.setScalar(0.92 + a * 0.08);
+        mesh.rotation.z = -glideSide * glideProgress * 0.12;
+      } else if (lyricSceneMode === 'push') {
+        mesh.userData.skullMouthMeshLocked = false;
+        var pushSide = mesh.userData.pushDirection || 1;
+        var pushEntry = (1 - a) * -pushSide;
+        mesh.position.x += ((pushEntry * 0.92) - mesh.position.x) * 0.30;
+        mesh.position.y += ((0.18 + pushEntry * 0.08) - mesh.position.y) * 0.24;
+        mesh.position.z += ((1.50 - Math.abs(pushEntry) * 0.10) - mesh.position.z) * 0.20;
+        mesh.scale.setScalar(0.92 + a * 0.08);
+        mesh.rotation.z = pushEntry * 0.10;
       } else if (cascadeLine) {
         mesh.userData.skullMouthMeshLocked = false;
         var cBreath = Math.sin(t * 0.55 + seed) * 0.018 + Math.sin(t * 1.12 + seed) * 0.010;
@@ -7576,11 +7689,11 @@ function updateStageLyrics3D(dt) {
         mesh.rotation.z = lyricSceneMode === 'cloud' ? Math.sin(seed * 4.9) * 0.055 : Math.sin(t * 0.25 + seed) * 0.010;
       } else if (lyricSceneMode === 'float') {
         mesh.userData.skullMouthMeshLocked = false;
-        mesh.scale.setScalar(0.94 + a * 0.06 + breathe * 0.72 + bass * 0.03);
-        mesh.position.x += ((Math.sin(t * 0.29 + seed) * 0.28) - mesh.position.x) * 0.065;
-        mesh.position.y += ((0.18 + Math.sin(t * 0.43 + seed) * 0.15) - mesh.position.y) * 0.065;
-        mesh.position.z += ((1.48 + Math.cos(t * 0.35 + seed) * 0.13) - mesh.position.z) * 0.065;
-        mesh.rotation.z = Math.sin(t * 0.31 + seed) * 0.035;
+        mesh.scale.setScalar(0.88 + a * 0.12 + breathe + bass * 0.05);
+        mesh.position.x += ((Math.sin(t * 0.42 + seed) * 0.58) - mesh.position.x) * 0.085;
+        mesh.position.y += ((0.18 + Math.sin(t * 0.56 + seed) * 0.28) - mesh.position.y) * 0.085;
+        mesh.position.z += ((1.48 + Math.cos(t * 0.44 + seed) * 0.24) - mesh.position.z) * 0.085;
+        mesh.rotation.z = Math.sin(t * 0.39 + seed) * 0.075;
       } else {
         mesh.userData.skullMouthMeshLocked = false;
         mesh.scale.setScalar(0.96 + a * 0.055 + breathe + bass * 0.038 + beatPulse * 0.014);
@@ -7646,6 +7759,15 @@ function updateStageLyrics3D(dt) {
       setLyricSparkSize(data, 0.046 + (1 - a) * 0.020);
     }
     if (data.sunMat) data.sunMat.opacity = lyricGlowStrength > 0 && !shelfDetailOpen ? opacity * 0.08 * lyricGlowStrength : 0;
+    if (mesh.userData.pushOutDirection) {
+      var pushOut = mesh.userData.pushOutDirection;
+      mesh.position.x += pushOut * dt * (5.2 + a * 3.4);
+      mesh.position.y += pushOut * dt * 0.42;
+      mesh.position.z -= dt * 0.18;
+      mesh.scale.setScalar(1 - a * 0.08);
+      mesh.rotation.z += pushOut * dt * 0.72;
+      return a < 1;
+    }
     mesh.position.z -= dt * 0.26;
     mesh.position.y += dt * 0.08;
     mesh.scale.setScalar(0.98 - a * 0.06);
@@ -10984,7 +11106,7 @@ function applyCoverDataUrl(dataUrl, opts) {
 }
 
 function activeBackgroundImageForParticles(song) {
-  var media = getCustomBackgroundMediaForSong(song || currentCoverSong());
+  var media = effectiveBackgroundMedia(song || currentCoverSong());
   return media && media.type === 'image' && media.src ? media.src : '';
 }
 
@@ -13796,6 +13918,26 @@ function saveCustomBackgroundMediaMap() {
     console.warn('custom background media save failed:', e);
     return false;
   }
+}
+function readGlobalBackgroundMedia() {
+  try {
+    return normalizeCustomBackgroundMedia(JSON.parse(localStorage.getItem(GLOBAL_BACKGROUND_MEDIA_STORE_KEY) || 'null'));
+  } catch (e) {
+    return null;
+  }
+}
+function saveGlobalBackgroundMedia() {
+  try {
+    if (globalBackgroundMedia) localStorage.setItem(GLOBAL_BACKGROUND_MEDIA_STORE_KEY, JSON.stringify(globalBackgroundMedia));
+    else localStorage.removeItem(GLOBAL_BACKGROUND_MEDIA_STORE_KEY);
+    return true;
+  } catch (e) {
+    console.warn('global background media save failed:', e);
+    return false;
+  }
+}
+function effectiveBackgroundMedia(song) {
+  return normalizeCustomBackgroundMedia(globalBackgroundMedia) || getCustomBackgroundMediaForSong(song || currentCoverSong());
 }
 function isInlineCoverSrc(src) {
   return typeof src === 'string' && (/^data:image\//i.test(src) || /^blob:/i.test(src));
@@ -19883,7 +20025,7 @@ function normalizeFxArchiveSnapshot(raw) {
     shelfOpacity: archiveNumber(raw, 'shelfOpacity', fxDefaults.shelfOpacity, 0.25, 1),
     shelfBgOpacity: archiveNumber(raw, 'shelfBgOpacity', fxDefaults.shelfBgOpacity, 0.25, 0.98),
     shelfAccentColor: normalizeHexColor(raw.shelfAccentColor || fxDefaults.shelfAccentColor, fxDefaults.shelfAccentColor),
-    cam: archiveMode(raw, 'cam', /^(off|gesture)$/, fxDefaults.cam)
+    cam: 'off'
   };
 }
 function readUserFxArchives() {
@@ -20415,7 +20557,8 @@ function resetVisualIconColor() {
 }
 function applyCustomBackground() {
   var color = normalizeHexColor(fx.backgroundColor || '#000000', '#000000');
-  var media = syncCurrentCustomBackgroundMedia();
+  syncCurrentCustomBackgroundMedia();
+  var media = effectiveBackgroundMedia();
   var hasVideo = !!(media && media.type === 'video');
   var opacity = clampRange(fx.backgroundOpacity == null ? 1 : Number(fx.backgroundOpacity), 0, 1);
   var customColor = fx.backgroundColorMode === 'custom' || !!fx.backgroundColorCustom;
@@ -20473,6 +20616,7 @@ function updateCustomBackgroundControls() {
   var picker = document.getElementById('bg-color-picker');
   var value = document.getElementById('bg-color-value');
   var imageValue = document.getElementById('bg-image-value');
+  var globalMediaValue = document.getElementById('global-bg-media-value');
   var customColor = fx.backgroundColorMode === 'custom' || !!fx.backgroundColorCustom;
   if (picker) picker.value = color;
   if (value) value.textContent = customColor ? color.toUpperCase() : '\u5c01\u9762\u6e10\u53d8';
@@ -20482,6 +20626,7 @@ function updateCustomBackgroundControls() {
   }
   setRange('fx-bgopacity', fx.backgroundOpacity == null ? 1 : fx.backgroundOpacity);
   if (imageValue) imageValue.textContent = customBackgroundMediaLabel(fx.backgroundMedia || fx.backgroundImage);
+  if (globalMediaValue) globalMediaValue.textContent = customBackgroundMediaLabel(globalBackgroundMedia);
   applyBackgroundMediaHint();
 }
 function setCustomBackgroundColor(color, silent, customFlag) {
@@ -20538,7 +20683,21 @@ function setCustomBackgroundMedia(media, silent) {
   saveLyricLayout();
   if (!silent) showToast(media ? (media.type === 'video' ? '已为当前歌曲应用背景视频，粒子使用专辑' : '已为当前歌曲应用背景粒子图') : '已清除当前歌曲背景媒体，恢复专辑粒子');
 }
-function readBackgroundImageFile(file) {
+function setGlobalBackgroundMedia(media, silent) {
+  globalBackgroundMedia = normalizeCustomBackgroundMedia(media);
+  saveGlobalBackgroundMedia();
+  updateCustomBackgroundControls();
+  reloadCurrentVisualCoverForBackground(globalBackgroundMedia ? 'global-media' : 'global-clear');
+  if (!silent) {
+    showToast(globalBackgroundMedia
+      ? (globalBackgroundMedia.type === 'video' ? '统一背景视频已生效' : '统一背景粒子图已生效')
+      : '已清除统一背景媒体，恢复当前歌曲背景媒体');
+  }
+}
+function clearGlobalBackgroundMedia() {
+  setGlobalBackgroundMedia(null);
+}
+function readBackgroundImageFile(file, globalTarget) {
   if (!file || !/^image\//i.test(file.type || '')) {
     showToast('请选择图片文件');
     return;
@@ -20562,7 +20721,8 @@ function readBackgroundImageFile(file) {
       if (!/^data:image\/webp/i.test(out)) {
         try { out = cv.toDataURL('image/jpeg', 0.86); } catch (err2) { out = String(e.target.result || ''); }
       }
-      setCustomBackgroundImage(out);
+      if (globalTarget) setGlobalBackgroundMedia({ type: 'image', src: out });
+      else setCustomBackgroundImage(out);
     };
     img.onerror = function(){ showToast('背景图片读取失败'); };
     img.src = e.target.result;
@@ -20570,14 +20730,16 @@ function readBackgroundImageFile(file) {
   reader.onerror = function(){ showToast('背景图片读取失败'); };
   reader.readAsDataURL(file);
 }
-function readBackgroundVideoFile(file) {
+function readBackgroundVideoFile(file, globalTarget) {
   if (!file || !/^video\//i.test(file.type || '')) {
     showToast('请选择视频文件');
     return;
   }
   var id = 'bg-video-' + Date.now() + '-' + Math.random().toString(16).slice(2);
   putCustomBackgroundBlob(id, file, { name: file.name || '', mime: file.type || '', size: file.size || 0 }).then(function(){
-    setCustomBackgroundMedia({ type: 'video', id: id, name: file.name || '', mime: file.type || '', size: file.size || 0 });
+    var media = { type: 'video', id: id, name: file.name || '', mime: file.type || '', size: file.size || 0 };
+    if (globalTarget) setGlobalBackgroundMedia(media);
+    else setCustomBackgroundMedia(media);
   }).catch(function(err){
     console.warn('background video store failed:', err);
     if ((file.size || 0) > 18 * 1024 * 1024) {
@@ -20586,16 +20748,18 @@ function readBackgroundVideoFile(file) {
     }
     var reader = new FileReader();
     reader.onload = function(e){
-      setCustomBackgroundMedia({ type: 'video', src: String(e.target.result || ''), name: file.name || '', mime: file.type || '', size: file.size || 0 });
+      var media = { type: 'video', src: String(e.target.result || ''), name: file.name || '', mime: file.type || '', size: file.size || 0 };
+      if (globalTarget) setGlobalBackgroundMedia(media);
+      else setCustomBackgroundMedia(media);
     };
     reader.onerror = function(){ showToast('背景视频读取失败'); };
     reader.readAsDataURL(file);
   });
 }
-function readBackgroundMediaFile(file) {
+function readBackgroundMediaFile(file, globalTarget) {
   if (!file) return;
-  if (/^image\//i.test(file.type || '')) readBackgroundImageFile(file);
-  else if (/^video\//i.test(file.type || '')) readBackgroundVideoFile(file);
+  if (/^image\//i.test(file.type || '')) readBackgroundImageFile(file, globalTarget);
+  else if (/^video\//i.test(file.type || '')) readBackgroundVideoFile(file, globalTarget);
   else showToast('请选择图片或视频文件');
 }
 function applyUiAccentColor() {
@@ -21097,7 +21261,7 @@ function setLyricFlowMode(mode, silent) {
   updateLyricFlowControls();
   saveLyricLayout();
   if (!silent) {
-    var labels = { single:'单行', cascade:'纵向淡出', auto:'幻彩自动', float:'浮游', hero:'巨幕', slant:'斜切', cloud:'词云', network:'连线', geometry:'几何' };
+    var labels = { single:'单行', cascade:'纵向淡出', auto:'幻变' };
     showToast('歌词效果: ' + (labels[next] || '单行'));
   }
 }
@@ -21430,18 +21594,23 @@ function ensureLyricPrimaryControls() {
   ].forEach(function(id){ moveToggleToGrid(id, grid); });
 }
 function applyBackgroundMediaHint() {
-  var value = document.getElementById('bg-image-value');
-  if (value && !value.dataset.mediaHint) {
-    value.dataset.mediaHint = '1';
-    value.title = '支持图片 JPG / PNG / WebP 与视频 MP4 / WebM / MOV 上传';
-  }
-  var label = value && value.closest ? value.closest('.fx-color-row-label') : null;
-  if (label && !document.getElementById('bg-media-hint')) {
-    var hint = document.createElement('small');
-    hint.id = 'bg-media-hint';
-    hint.textContent = '支持图片 / 视频上传';
-    label.appendChild(hint);
-  }
+  [
+    ['bg-image-value', 'bg-media-hint', '支持图片 / 视频上传'],
+    ['global-bg-media-value', 'global-bg-media-hint', '全局优先 · 清除后回退']
+  ].forEach(function(item){
+    var value = document.getElementById(item[0]);
+    if (value && !value.dataset.mediaHint) {
+      value.dataset.mediaHint = '1';
+      value.title = '支持图片 JPG / PNG / WebP 与视频 MP4 / WebM / MOV 上传';
+    }
+    var label = value && value.closest ? value.closest('.fx-color-row-label') : null;
+    if (label && !document.getElementById(item[1])) {
+      var hint = document.createElement('small');
+      hint.id = item[1];
+      hint.textContent = item[2];
+      label.appendChild(hint);
+    }
+  });
 }
 function relabelFxPanelControls() {
   var title = document.querySelector('#fx-panel .fx-title');
@@ -21971,6 +22140,14 @@ function bindFxPanel() {
       e.target.value = '';
     });
   }
+  var globalBgMediaInput = document.getElementById('global-background-media-input');
+  if (globalBgMediaInput) {
+    globalBgMediaInput.addEventListener('change', function(e){
+      var file = e.target.files && e.target.files[0];
+      if (file) readBackgroundMediaFile(file, true);
+      e.target.value = '';
+    });
+  }
   ['ui-accent-picker','visual-tint-picker','home-accent-picker','home-icon-picker','visual-icon-picker','bg-color-picker','shelf-accent-picker','lyric-color-picker','lyric-highlight-picker','lyric-glow-picker'].forEach(function(id){
     bindColorLabPicker(document.getElementById(id));
   });
@@ -22176,18 +22353,18 @@ function bindFxFabButton() {
 }
 bindFxFabButton();
 function resetFx() {
-  var savedCam = fx.cam;
   var savedShelf = fx.shelf;
   var savedShelfCameraMode = normalizeShelfCameraMode(fx.shelfCameraMode || fxDefaults.shelfCameraMode);
   var savedShelfPresence = normalizeShelfPresence(fx.shelfPresence || fxDefaults.shelfPresence);
   fx = Object.assign({}, fxDefaults, {
-    cam: savedCam,
+    cam: 'off',
     shelf: savedShelf,
     shelfCameraMode: savedShelfCameraMode,
     shelfPresence: savedShelfPresence,
     shelfAngleY: shelfDefaultAngleForCameraMode(savedShelfCameraMode),
     shelfAngleYManual: false
   });
+  setCamMode('off');
   applyCoverParticleResolution(fx.coverResolution, { reload: true });
   updateFxInputs();
   applyDesktopLyricsState(true);

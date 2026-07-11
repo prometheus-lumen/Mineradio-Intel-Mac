@@ -1344,9 +1344,8 @@ body.desktop-shell.diy-mode #bottom-bar.stage-mode{left:50%;width:min(1080px,cal
 .fx-seg button:hover{background:rgba(255,255,255,.05);color:#fff}
 .fx-seg button.active{background:rgba(0,245,212,.10);color:var(--fc-accent)}
 .fx-seg.lyric-scene-seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));overflow:visible}
-.fx-seg.lyric-scene-seg button{min-width:0;border-bottom:1px solid rgba(255,255,255,.05)}
+.fx-seg.lyric-scene-seg button{min-width:0}
 .fx-seg.lyric-scene-seg button:nth-child(3n){border-right:none}
-.fx-seg.lyric-scene-seg button:nth-last-child(-n+3){border-bottom:none}
 
 /* --- 高级折叠 --- */
 .fx-advanced{margin-top:16px;border:1px solid rgba(255,255,255,.055);border-radius:13px;padding:10px 12px;background:rgba(255,255,255,.022)}
