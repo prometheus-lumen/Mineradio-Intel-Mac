@@ -1995,6 +1995,14 @@ html .home-hero .home-calendar-card::before{opacity:0!important}
 .home-hero .home-calendar-time,.home-hero .home-calendar-year,.home-hero .home-calendar-daybox{background:transparent!important;box-shadow:none!important}
 .home-card-title,.home-card-sub,.home-card-label,.home-title,.home-sub,.home-kicker,.home-weather-pill,.home-calendar-time,.home-calendar-year,.home-calendar-daybox{ text-shadow:0 2px 16px rgba(0,0,0,.70),0 0 1px rgba(0,0,0,.82)}
 
+/* macOS Chromium can repeatedly rebuild the video/backdrop sampling surface when
+   an overlay appears. Keep the glass fill, border and shadow, but stop sampling
+   the moving video only for this exact platform/background combination. */
+body.desktop-mac.custom-background-video *{
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+}
+
 /* ============================================================ */
 /*  响应式                                                        */
 /* ============================================================ */
