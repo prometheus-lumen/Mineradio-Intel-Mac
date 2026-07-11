@@ -22545,9 +22545,9 @@ async function startRealUpdatePatch() {
     updatePreviewState.errorReason = (e && e.message) || '快速补丁不可用';
     updatePreviewState.errorDetail = updatePreviewState.errorReason;
     updatePreviewState.message = updatePreviewState.errorReason;
-    updateUpdatePreviewProgress(0);
     updatePreviewState.patchFallbackTried = true;
-    showToast('快速补丁不可用，可手动下载完整安装包');
+    showToast('快速补丁不可用，正在切换完整安装包');
+    setTimeout(startRealUpdateDownload, 350);
   }
 }
 
@@ -22604,7 +22604,8 @@ function applyUpdateDownloadJob(job) {
     updateUpdatePreviewProgress(job && job.progress || updatePreviewState.progress || 0);
     if (updatePreviewState.mode === 'patch' && updatePreviewState.downloadUrl && !updatePreviewState.patchFallbackTried) {
       updatePreviewState.patchFallbackTried = true;
-      showToast('快速补丁失败，可手动下载完整安装包：' + updatePreviewState.errorReason);
+      showToast('快速补丁失败，正在切换完整安装包');
+      setTimeout(startRealUpdateDownload, 350);
       return;
     }
     showToast('更新下载失败：' + updatePreviewState.errorReason);
@@ -22646,7 +22647,8 @@ function applyUpdateDownloadJob(job) {
         showToast('快速补丁已应用');
       }
     } else if (updatePreviewState.installerPath) {
-      showToast(updatePreviewState.cached ? '已复用上次下载的安装包' : '安装包已下载，点击按钮打开');
+      showToast(updatePreviewState.cached ? '已复用上次下载的安装包，正在打开' : '安装包已下载并校验，正在打开');
+      setTimeout(function(){ openDownloadedUpdateInstaller(updatePreviewState.installerPath); }, 350);
     }
   }
 }
@@ -26138,41 +26140,9 @@ function touchBarLyricsPayload() {
     }
   };
 }
-var TOUCHBAR_LYRIC_WIDTH = 320;
+var TOUCHBAR_LYRIC_WIDTH = 300;
 var TOUCHBAR_LYRIC_SCALE = 2;
 var touchBarLyricCanvas = null;
-var touchBarLikeCanvas = null;
-function touchBarLikeImageData(liked) {
-  if (!touchBarLikeCanvas) {
-    touchBarLikeCanvas = document.createElement('canvas');
-    touchBarLikeCanvas.width = 44;
-    touchBarLikeCanvas.height = 44;
-  }
-  var ctx = touchBarLikeCanvas.getContext('2d');
-  if (!ctx) return '';
-  ctx.clearRect(0, 0, 44, 44);
-  ctx.beginPath();
-  ctx.moveTo(22, 38);
-  ctx.bezierCurveTo(19, 35, 6, 27, 6, 16);
-  ctx.bezierCurveTo(6, 9.5, 10.7, 6, 16, 6);
-  ctx.bezierCurveTo(19.2, 6, 21.2, 7.7, 22, 9.1);
-  ctx.bezierCurveTo(22.8, 7.7, 24.8, 6, 28, 6);
-  ctx.bezierCurveTo(33.3, 6, 38, 9.5, 38, 16);
-  ctx.bezierCurveTo(38, 27, 25, 35, 22, 38);
-  ctx.closePath();
-  ctx.lineWidth = 3.2;
-  ctx.lineJoin = 'round';
-  ctx.strokeStyle = liked ? '#ff6f91' : '#f5f5f7';
-  ctx.fillStyle = liked ? '#ff6f91' : 'rgba(0,0,0,0)';
-  if (liked) {
-    ctx.shadowColor = 'rgba(255,111,145,.42)';
-    ctx.shadowBlur = 5;
-  }
-  ctx.fill();
-  ctx.shadowBlur = 0;
-  ctx.stroke();
-  return touchBarLikeCanvas.toDataURL('image/png');
-}
 function touchBarLyricImageData(payload) {
   if (!touchBarLyricCanvas) {
     touchBarLyricCanvas = document.createElement('canvas');
@@ -26184,28 +26154,30 @@ function touchBarLyricImageData(payload) {
   var text = String(payload.text || payload.title || 'Mineradio').replace(/\s+/g, ' ').trim() || 'Mineradio';
   var colors = payload.colors || {};
   var progress = clampRange(Number(payload.progress) || 0, 0, 1);
-  var maxWidth = touchBarLyricCanvas.width - 24;
-  var fontSize = 36;
+  var sidePadding = 24;
+  var maxWidth = touchBarLyricCanvas.width - sidePadding * 2;
+  var fontSize = 40;
   var fontFamily = '-apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif';
   ctx.clearRect(0, 0, touchBarLyricCanvas.width, touchBarLyricCanvas.height);
   ctx.font = '650 ' + fontSize + 'px ' + fontFamily;
   var measuredWidth = ctx.measureText(text).width;
-  if (measuredWidth > maxWidth) {
-    fontSize = Math.max(26, fontSize * maxWidth / measuredWidth);
-    ctx.font = '650 ' + fontSize + 'px ' + fontFamily;
-    measuredWidth = ctx.measureText(text).width;
-  }
-  var x = touchBarLyricCanvas.width / 2;
+  var isLong = measuredWidth > maxWidth;
+  var scrollProgress = clampRange((progress - 0.12) / 0.76, 0, 1);
+  scrollProgress = scrollProgress * scrollProgress * (3 - 2 * scrollProgress);
+  var overflow = Math.max(0, measuredWidth - maxWidth);
+  var x = isLong
+    ? sidePadding - overflow * scrollProgress
+    : (touchBarLyricCanvas.width - measuredWidth) / 2;
   var y = touchBarLyricCanvas.height / 2 + 1;
-  var left = x - measuredWidth / 2;
-  ctx.textAlign = 'center';
+  ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
   ctx.fillStyle = colors.primary || '#d6f8ff';
   ctx.globalAlpha = 0.72;
   ctx.fillText(text, x, y);
   ctx.save();
   ctx.beginPath();
-  ctx.rect(left, 0, measuredWidth * progress, touchBarLyricCanvas.height);
+  var highlightEnd = Math.max(0, Math.min(touchBarLyricCanvas.width, x + measuredWidth * progress));
+  ctx.rect(0, 0, highlightEnd, touchBarLyricCanvas.height);
   ctx.clip();
   ctx.globalAlpha = 1;
   ctx.fillStyle = colors.highlight || colors.secondary || '#fff0b8';
@@ -26224,7 +26196,6 @@ function pushTouchBarLyricsState(force) {
   var key = payload.text + '|' + payload.title + '|' + payload.playing + '|' + payload.liked + '|' + Math.round((payload.progress || 0) * TOUCHBAR_LYRIC_WIDTH) + '|' + colors.primary + '|' + colors.secondary + '|' + colors.highlight;
   if (!force && key === desktopOverlayPushState.lastTouchBarKey) return;
   payload.imageData = touchBarLyricImageData(payload);
-  payload.likeImageData = touchBarLikeImageData(payload.liked);
   desktopOverlayPushState.touchBarAt = now;
   desktopOverlayPushState.lastTouchBarKey = key;
   api.updateTouchBarLyrics(payload).catch(function(e){ console.warn('touch bar lyrics update failed:', e); });

@@ -50,33 +50,33 @@ Mineradio v1.1.0 纯净安装版
 
 应用会请求 GitHub Releases latest。为了避免 `v1.0.10` 旧客户端通过软件内更新直接拉到 `v1.1.0`，本次 GitHub Release 不应设为旧更新通道的 latest。
 
-## 一键发布
+## 准备发布资产
 
-代码提交并保持工作树干净后，执行一条命令即可完成检查、升版本、构建补丁或 DMG、提交版本号、推送 tag、上传 GitHub Release 并设为 Latest：
-
-```bash
-npm run release:update
-```
-
-默认自动升补丁版本并判断发布模式。首次迁移或依赖、构建配置发生变化时使用完整 DMG：
+`release:prepare` 只在本地检查和构建，不会提交代码、创建 tag、推送或上传文件：
 
 ```bash
-npm run release:update -- --version 1.1.4 --mode full
+npm run release:prepare
 ```
 
-可先预演且不修改文件、不上传：
+需要为指定旧版本生成快速补丁时：
 
 ```bash
-npm run release:update -- --dry-run
+npm run release:prepare -- --from 1.1.5
 ```
 
-如果构建和标签推送已经成功，但 GitHub Release 创建或资产上传中断，可直接续传，不会重复构建：
+构建完成后，脚本会生成：
+
+- `dist/Mineradio-update.json`
+- `dist/Mineradio-版本-UPLOAD.txt`
+- x64/arm64 DMG、`latest-mac.yml` 和可选快速补丁
+
+按照上传清单手动创建并发布 GitHub Release。发布后验证 Latest Release：
 
 ```bash
-npm run release:update -- --version 1.1.5 --resume
+npm run release:verify -- --remote
 ```
 
-脚本优先读取 `GH_TOKEN` / `GITHUB_TOKEN`，否则复用 Git Credential Manager 已保存的 GitHub 凭据。发布失败留下草稿 Release 时，修复问题后用相同参数重跑会复用已上传资产。
+`npm run release:update` 保留为 `release:prepare` 的兼容入口，同样不会操作 Git 或上传大文件。
 
 ### 轻量在线更新（无需重新打安装包）
 
@@ -90,7 +90,7 @@ Mac 双架构构建产物使用 `Mineradio-版本-架构.dmg` 命名。不要在
 npm run build:mac:dmg
 ```
 
-仅修改 `public/`、`desktop/`、`server.js`、`dj-analyzer.js` 等应用资源，且没有新增运行依赖时，可以只发布快速补丁：
+首个支持 `Mineradio-update.json` 的版本必须上传完整 x64/arm64 DMG。之后仅修改 `public/`、`desktop/`、`server.js`、`dj-analyzer.js` 等应用资源，且没有新增运行依赖时，可以附带快速补丁：
 
 ```powershell
 npm run update:patch -- --from <上一版本的 Git tag 或 commit>
@@ -100,15 +100,23 @@ npm run update:patch -- --from <上一版本的 Git tag 或 commit>
 
 补丁生成前必须先更新 `package.json` 版本号并提交新增文件。若运行依赖有变化、文件操作超过 40 个、补丁超过 12 MB，脚本会拒绝生成，此时必须重新打完整安装包。安装器、Electron 二进制、原生模块和卸载逻辑的变更也必须走完整安装包。
 
-本地验证更新链路时，可以用临时 manifest：
+更新清单格式：
 
 ```json
 {
-  "latestVersion": "1.1.0-test",
-  "release": {
-    "name": "Mineradio v1.1.0-test",
-    "downloadUrl": "http://127.0.0.1:3144/Mineradio-1.1.0-Setup.exe",
-    "notes": ["本地在线更新链路测试"]
-  }
+  "schemaVersion": 1,
+  "version": "1.1.6",
+  "tag": "1.1.6",
+  "releaseUrl": "https://github.com/prometheus-lumen/Mineradio-Intel-Mac/releases/tag/1.1.6",
+  "notes": ["更新说明"],
+  "assets": {
+    "darwin-x64": { "name": "Mineradio-1.1.6-x64.dmg", "size": 123, "sha512": "..." },
+    "darwin-arm64": { "name": "Mineradio-1.1.6-arm64.dmg", "size": 123, "sha512": "..." }
+  },
+  "patches": [
+    { "from": "1.1.5", "to": "1.1.6", "name": "Mineradio-1.1.5→1.1.6.patch.json", "size": 123, "sha256": "..." }
+  ]
 }
 ```
+
+客户端优先读取此清单。精确补丁成功后自动重启；没有匹配补丁时下载并校验当前架构 DMG，然后自动打开，由用户手动替换应用。

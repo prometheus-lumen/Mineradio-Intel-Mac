@@ -9,7 +9,9 @@
   "scripts": {
     "start": "electron .",
     "update:patch": "node tools/generate-update-patch.js",
-    "release:update": "node tools/release-update.js",
+    "release:prepare": "node tools/release-prepare.js",
+    "release:verify": "node tools/release-verify.js",
+    "release:update": "node tools/release-prepare.js",
     "build:win": "electron-builder --win nsis",
     "build:win:dir": "electron-builder --win dir",
     "build:mac:dmg": "CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac dmg --x64 --arm64",
@@ -98,7 +100,8 @@
       "provider": "github",
       "owner": "prometheus-lumen",
       "repo": "Mineradio-Intel-Mac",
-      "preview": true,
+      "manifest": "https://github.com/prometheus-lumen/Mineradio-Intel-Mac/releases/latest/download/Mineradio-update.json",
+      "preview": false,
       "preferMirrors": true,
       "mirrors": [
         "https://gh.llkk.cc/",

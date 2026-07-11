@@ -45,7 +45,7 @@ const NETEASE_LOGIN_PARTITION = 'persist:mineradio-netease-login';
 const NETEASE_LOGIN_URL = 'https://music.163.com/#/login';
 const QQ_LOGIN_PARTITION = 'persist:mineradio-qqmusic-login';
 const QQ_LOGIN_URL = 'https://y.qq.com/n/ryqq/profile';
-const TOUCHBAR_LYRIC_WIDTH = 320;
+const TOUCHBAR_LYRIC_WIDTH = 300;
 const TOUCHBAR_LYRIC_HEIGHT = 30;
 
 function getAngleBackend() {
@@ -64,23 +64,8 @@ function supportsTouchBarLyrics() {
     && typeof mainWindow.setTouchBar === 'function';
 }
 
-function touchBarButtonOptions(label, accessibilityLabel, click) {
-  return {
-    label,
-    accessibilityLabel,
-    backgroundColor: '#3f454c',
-    click,
-  };
-}
-
 function touchBarPlayLabel(playing) {
   return playing ? '⏸' : '▶';
-}
-
-function touchBarLikeImage(dataUrl) {
-  if (!/^data:image\/png;base64,/i.test(String(dataUrl || ''))) return null;
-  const image = nativeImage.createFromDataURL(dataUrl);
-  return image && !image.isEmpty() ? image.resize({ width: 22, height: 22, quality: 'best' }) : null;
 }
 
 function touchBarLyricImage(dataUrl) {
@@ -90,30 +75,36 @@ function touchBarLyricImage(dataUrl) {
   return image.resize({ width: TOUCHBAR_LYRIC_WIDTH, height: TOUCHBAR_LYRIC_HEIGHT, quality: 'best' });
 }
 
+function touchBarControlButton(label, accessibilityLabel, action) {
+  return new TouchBar.TouchBarButton({
+    label,
+    accessibilityLabel,
+    backgroundColor: '#3f454c',
+    click: () => sendGlobalHotkeyAction(action),
+  });
+}
+
 function ensureTouchBarLyrics() {
   if (!supportsTouchBarLyrics()) return false;
-  if (touchBarRoot && touchBarLikeButton && touchBarLyricButton && touchBarPrevButton && touchBarPlayButton && touchBarNextButton) return true;
-  touchBarLikeButton = new TouchBar.TouchBarButton({
-    label: '♡',
-    iconPosition: 'overlay',
-    accessibilityLabel: '喜欢当前歌曲',
-    backgroundColor: '#3f454c',
-    click: () => sendGlobalHotkeyAction('toggleLike'),
-  });
-  touchBarPrevButton = new TouchBar.TouchBarButton(touchBarButtonOptions('⏮', '上一首', () => sendGlobalHotkeyAction('prevTrack')));
-  touchBarPlayButton = new TouchBar.TouchBarButton(touchBarButtonOptions(touchBarPlayLabel(true), '播放或暂停', () => sendGlobalHotkeyAction('togglePlay')));
-  touchBarNextButton = new TouchBar.TouchBarButton(touchBarButtonOptions('⏭', '下一首', () => sendGlobalHotkeyAction('nextTrack')));
+  if (touchBarRoot && touchBarLikeButton && touchBarPrevButton && touchBarPlayButton && touchBarNextButton && touchBarLyricButton) return true;
+  touchBarLikeButton = touchBarControlButton('♡', '收藏或取消收藏', 'toggleLike');
+  touchBarPrevButton = touchBarControlButton('⏮', '上一首', 'prevTrack');
+  touchBarPlayButton = touchBarControlButton(touchBarPlayLabel(true), '播放或暂停', 'togglePlay');
+  touchBarNextButton = touchBarControlButton('⏭', '下一首', 'nextTrack');
   touchBarLyricButton = new TouchBar.TouchBarButton({
     label: 'Mineradio',
     accessibilityLabel: 'Mineradio lyrics',
   });
   const items = TouchBar.TouchBarSpacer
-      ? [
+    ? [
         touchBarLikeButton,
-        touchBarPrevButton,
-        touchBarPlayButton,
-        touchBarNextButton,
         new TouchBar.TouchBarSpacer({ size: 'small' }),
+        touchBarPrevButton,
+        new TouchBar.TouchBarSpacer({ size: 'small' }),
+        touchBarPlayButton,
+        new TouchBar.TouchBarSpacer({ size: 'small' }),
+        touchBarNextButton,
+        new TouchBar.TouchBarSpacer({ size: 'large' }),
         touchBarLyricButton,
       ]
     : [touchBarLikeButton, touchBarPrevButton, touchBarPlayButton, touchBarNextButton, touchBarLyricButton];
@@ -134,10 +125,7 @@ function updateTouchBarLyrics(payload = {}) {
   const playing = payload.playing !== false;
   const liked = !!payload.liked;
   if (liked !== touchBarLastLiked && touchBarLikeButton) {
-    const likeImage = touchBarLikeImage(payload.likeImageData);
-    touchBarLikeButton.label = likeImage ? '' : (liked ? '♥' : '♡');
-    if (likeImage) touchBarLikeButton.icon = likeImage;
-    touchBarLikeButton.accessibilityLabel = liked ? '取消喜欢当前歌曲' : '喜欢当前歌曲';
+    touchBarLikeButton.label = liked ? '♥' : '♡';
     touchBarLastLiked = liked;
   }
   if (playing !== touchBarLastPlaying && touchBarPlayButton) {

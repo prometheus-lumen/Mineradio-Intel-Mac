@@ -253,6 +253,7 @@ function readUpdateConfig(pkg) {
     manifest: process.env.MINERADIO_UPDATE_MANIFEST
       || process.env.MINERADIO_UPDATE_MANIFEST_URL
       || process.env.MINERADIO_UPDATE_MANIFEST_FILE
+      || local.manifest
       || '',
   };
 }
@@ -458,6 +459,66 @@ function updateAssetNameFromUrl(value) {
 }
 function normalizeManifestUpdateInfo(data) {
   data = data || {};
+  if (Number(data.schemaVersion) === 1 && data.assets && typeof data.assets === 'object') {
+    const latestVersion = normalizeVersion(data.version || APP_VERSION) || APP_VERSION;
+    const tagName = String(data.tag || latestVersion).trim() || latestVersion;
+    const arch = (process.env.MINERADIO_UPDATE_ARCH || process.arch) === 'arm64' ? 'arm64' : 'x64';
+    const rawAsset = data.assets['darwin-' + arch] || null;
+    const assetUrl = rawAsset && rawAsset.name
+      ? githubReleaseAssetUrl(tagName, rawAsset.name)
+      : '';
+    const assetInfo = assetUrl ? {
+      name: rawAsset.name,
+      size: Number(rawAsset.size || 0) || 0,
+      contentType: 'application/x-apple-diskimage',
+      downloadUrl: assetUrl,
+      downloadUrls: publicDownloadUrls(uniqueDownloadCandidates(assetUrl)),
+      sha256: '',
+      sha512: normalizeDigest(rawAsset.sha512 || '', 'sha512'),
+    } : null;
+    const rawPatch = (Array.isArray(data.patches) ? data.patches : []).find(item => (
+      normalizeVersion(item && item.from) === normalizeVersion(APP_VERSION)
+      && normalizeVersion(item && item.to) === latestVersion
+    )) || null;
+    const patchUrl = rawPatch && rawPatch.name ? githubReleaseAssetUrl(tagName, rawPatch.name) : '';
+    const patchInfo = patchUrl ? {
+      name: rawPatch.name,
+      size: Number(rawPatch.size || 0) || 0,
+      contentType: 'application/json',
+      downloadUrl: patchUrl,
+      downloadUrls: publicDownloadUrls(uniqueDownloadCandidates(patchUrl)),
+      from: normalizeVersion(rawPatch.from),
+      to: normalizeVersion(rawPatch.to),
+      sha256: normalizeDigest(rawPatch.sha256 || '', 'sha256').toLowerCase(),
+      sha512: '',
+    } : null;
+    const notes = Array.isArray(data.notes)
+      ? data.notes.slice(0, 4).map(cleanReleaseLine).filter(Boolean)
+      : extractReleaseNotes(data.notes);
+    const releaseUrl = String(data.releaseUrl || '').trim()
+      || `https://github.com/${UPDATE_CONFIG.owner}/${UPDATE_CONFIG.repo}/releases/tag/${encodeURIComponent(tagName)}`;
+    return {
+      configured: true,
+      preview: false,
+      updateAvailable: compareVersions(latestVersion, APP_VERSION) > 0,
+      currentVersion: APP_VERSION,
+      latestVersion,
+      release: {
+        tagName,
+        name: 'Mineradio v' + latestVersion,
+        version: latestVersion,
+        publishedAt: '',
+        htmlUrl: releaseUrl,
+        downloadUrl: assetUrl,
+        asset: assetInfo,
+        patch: patchInfo,
+        patchAvailable: !!(patchInfo && patchInfo.size && patchInfo.sha256 && compareVersions(latestVersion, APP_VERSION) > 0),
+        summary: notes[0] || '发现新版本，建议更新。',
+        notes: notes.length ? notes : UPDATE_FALLBACK_NOTES,
+      },
+      source: 'manifest',
+    };
+  }
   const release = data.release || {};
   const asset = release.asset || data.asset || {};
   const latestVersion = normalizeVersion(
@@ -532,12 +593,8 @@ async function readUpdateManifest(ref) {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
 }
 async function fetchManifestUpdateInfo(ref) {
-  try {
-    const data = await readUpdateManifest(ref);
-    return normalizeManifestUpdateInfo(data);
-  } catch (err) {
-    return localUpdateFallback(err.message || 'Update manifest failed', { configured: true });
-  }
+  const data = await readUpdateManifest(ref);
+  return normalizeManifestUpdateInfo(data);
 }
 function beatCacheRootInfo() {
   const configured = String(BEATMAP_CACHE_DIR || '').trim();
@@ -708,20 +765,36 @@ function yamlScalar(text, key) {
   if (!match) return '';
   return match[1].trim().replace(/^['"]|['"]$/g, '');
 }
-function githubReleaseDownloadUrl(version, fileName) {
-  const tag = 'v' + normalizeVersion(version);
+function githubReleaseAssetUrl(tag, fileName) {
   const encodedOwner = encodeURIComponent(UPDATE_CONFIG.owner);
   const encodedRepo = encodeURIComponent(UPDATE_CONFIG.repo);
   const encodedName = String(fileName || '').split('/').map(part => encodeURIComponent(part)).join('/');
-  return `https://github.com/${encodedOwner}/${encodedRepo}/releases/download/${tag}/${encodedName}`;
+  return `https://github.com/${encodedOwner}/${encodedRepo}/releases/download/${encodeURIComponent(String(tag || ''))}/${encodedName}`;
+}
+function githubReleaseDownloadUrl(version, fileName) {
+  return githubReleaseAssetUrl(normalizeVersion(version), fileName);
 }
 function parseLatestYmlUpdateInfo(text, reason) {
   const latestVersion = normalizeVersion(yamlScalar(text, 'version') || APP_VERSION) || APP_VERSION;
-  const assetPath = yamlScalar(text, 'path') || yamlScalar(text, 'url') || `Mineradio-${latestVersion}-Setup.exe`;
-  const sha512 = normalizeDigest(yamlScalar(text, 'sha512'), 'sha512');
-  const size = Number(yamlScalar(text, 'size') || 0) || 0;
+  const arch = (process.env.MINERADIO_UPDATE_ARCH || process.arch) === 'arm64' ? 'arm64' : 'x64';
+  const entries = [];
+  const entryPattern = /^\s*-\s+url:\s*(.+?)\s*$\n\s+sha512:\s*(.+?)\s*$\n\s+size:\s*(\d+)\s*$/gm;
+  let entryMatch;
+  while ((entryMatch = entryPattern.exec(String(text || '')))) {
+    entries.push({
+      path: entryMatch[1].trim().replace(/^['"]|['"]$/g, ''),
+      sha512: normalizeDigest(entryMatch[2], 'sha512'),
+      size: Number(entryMatch[3]) || 0,
+    });
+  }
+  const selected = entries.find(item => new RegExp('(?:^|[_.-])' + arch + '(?:[_.-]|$)', 'i').test(item.path)) || null;
+  const assetPath = (selected && selected.path) || yamlScalar(text, 'path') || yamlScalar(text, 'url') || '';
+  const sha512 = (selected && selected.sha512) || normalizeDigest(yamlScalar(text, 'sha512'), 'sha512');
+  const size = (selected && selected.size) || Number(yamlScalar(text, 'size') || 0) || 0;
   const releaseDate = yamlScalar(text, 'releaseDate');
-  const downloadUrl = githubReleaseDownloadUrl(latestVersion, assetPath);
+  const downloadUrl = assetPath
+    ? `https://github.com/${encodeURIComponent(UPDATE_CONFIG.owner)}/${encodeURIComponent(UPDATE_CONFIG.repo)}/releases/latest/download/${encodeURIComponent(assetPath)}`
+    : '';
   const candidates = uniqueDownloadCandidates(downloadUrl);
   const asset = {
     name: updateAssetNameFromUrl(downloadUrl) || assetPath,
@@ -764,8 +837,12 @@ async function fetchLatestYmlUpdateInfo(reason) {
   return parseLatestYmlUpdateInfo(result.text, reason);
 }
 async function fetchLatestUpdateInfo() {
-  if (UPDATE_CONFIG.manifest) return fetchManifestUpdateInfo(UPDATE_CONFIG.manifest);
   if (!UPDATE_CONFIG.configured || UPDATE_CONFIG.provider !== 'github') return localUpdateFallback();
+  let manifestReason = '';
+  if (UPDATE_CONFIG.manifest) {
+    try { return await fetchManifestUpdateInfo(UPDATE_CONFIG.manifest); }
+    catch (err) { manifestReason = err && err.message || 'Update manifest failed'; }
+  }
   const apiUrl = `https://api.github.com/repos/${encodeURIComponent(UPDATE_CONFIG.owner)}/${encodeURIComponent(UPDATE_CONFIG.repo)}/releases/latest`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8500);
@@ -778,7 +855,7 @@ async function fetchLatestUpdateInfo() {
       },
     });
     if (!resp.ok) {
-      try { return await fetchLatestYmlUpdateInfo('GitHub Releases ' + resp.status); }
+      try { return await fetchLatestYmlUpdateInfo(manifestReason || ('GitHub Releases ' + resp.status)); }
       catch (_) { return localUpdateFallback('GitHub Releases ' + resp.status, { configured: true }); }
     }
     const data = await resp.json();
@@ -807,7 +884,7 @@ async function fetchLatestUpdateInfo() {
       },
     };
   } catch (err) {
-    const reason = err && err.message || 'Update check failed';
+    const reason = manifestReason || (err && err.message) || 'Update check failed';
     try { return await fetchLatestYmlUpdateInfo(reason); }
     catch (fallbackErr) { return localUpdateFallback((fallbackErr && fallbackErr.message) || reason, { configured: true }); }
   } finally {
@@ -1125,6 +1202,9 @@ function startUpdateDownloadJob(info) {
   if (!info || !info.configured) return { ok: false, error: 'UPDATE_REPOSITORY_NOT_CONFIGURED' };
   if (!info.updateAvailable) return { ok: false, error: 'NO_UPDATE_AVAILABLE' };
   if (!/^https?:\/\//i.test(downloadUrl)) return { ok: false, error: 'UPDATE_ASSET_MISSING' };
+  if (!(Number(asset.size) > 0) || !normalizeDigest(asset.sha512 || '', 'sha512')) {
+    return { ok: false, error: 'UPDATE_ASSET_UNVERIFIED' };
+  }
 
   const version = info.latestVersion || release.version || '';
   const existing = activeUpdateJobFor(version);
@@ -1422,6 +1502,9 @@ function startUpdatePatchJob(info) {
   if (!info || !info.configured) return { ok: false, error: 'UPDATE_REPOSITORY_NOT_CONFIGURED' };
   if (!info.updateAvailable) return { ok: false, error: 'NO_UPDATE_AVAILABLE' };
   if (!release.patchAvailable || !/^https?:\/\//i.test(downloadUrl)) return { ok: false, error: 'PATCH_ASSET_MISSING' };
+  if (!(Number(patch.size) > 0) || !normalizeDigest(patch.sha256 || '', 'sha256')) {
+    return { ok: false, error: 'PATCH_ASSET_UNVERIFIED' };
+  }
 
   const version = info.latestVersion || release.version || patch.to || '';
   const existing = Array.from(updateDownloadJobs.values())
