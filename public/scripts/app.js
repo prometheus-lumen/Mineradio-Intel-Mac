@@ -5454,8 +5454,11 @@ var stageLyrics = {
   starRiver: null,
   starRiverWidth: 4.2,
   starRiverHeight: 0.58,
+  networkLines: null,
   lockFitScale: 1,
   snapCameraLockFrames: 0,
+  autoFlowMode: 'float',
+  autoFlowLinesRemaining: 0,
 };
 var lyricSunColor = new THREE.Color(0xffe6a4);
 var lyricSunHotColor = new THREE.Color(0xfff4cc);
@@ -5474,7 +5477,22 @@ var lyricTiltQuat = new THREE.Quaternion();
 var lyricTargetQuat = new THREE.Quaternion();
 var LYRIC_CAMERA_LOCK_MAX_SCALE = 0.80;
 function isCascadeLyricFlow() {
-  return fx && normalizeLyricFlowMode(fx.lyricFlowMode) === 'cascade';
+  var mode = fx && normalizeLyricFlowMode(fx.lyricFlowMode);
+  return mode === 'cascade' || mode === 'cloud' || mode === 'network';
+}
+var LYRIC_SCENE_MODES = ['float', 'hero', 'slant', 'cloud', 'network', 'geometry'];
+function resolvedLyricFlowMode(advance) {
+  var selected = normalizeLyricFlowMode(fx && fx.lyricFlowMode);
+  if (selected !== 'auto') return selected;
+  if (advance && stageLyrics.autoFlowLinesRemaining > 0) stageLyrics.autoFlowLinesRemaining -= 1;
+  if (!stageLyrics.autoFlowMode || stageLyrics.autoFlowLinesRemaining <= 0) {
+    var previous = stageLyrics.autoFlowMode;
+    var index = Math.floor(Math.random() * LYRIC_SCENE_MODES.length);
+    if (LYRIC_SCENE_MODES[index] === previous) index = (index + 1) % LYRIC_SCENE_MODES.length;
+    stageLyrics.autoFlowMode = LYRIC_SCENE_MODES[index];
+    stageLyrics.autoFlowLinesRemaining = 2 + Math.floor(Math.random() * 5);
+  }
+  return stageLyrics.autoFlowMode;
 }
 function setStageLyricViewBasisFromCameraOrQuaternion(fallbackQuat) {
   if (fallbackQuat) {
@@ -5553,6 +5571,53 @@ function createLyricsParticles() {
   stageLyrics.group.renderOrder = 38;
   scene.add(stageLyrics.group);
   ensureLyricStarRiver();
+}
+
+function ensureLyricNetworkLines() {
+  if (!stageLyrics.group || stageLyrics.networkLines) return stageLyrics.networkLines;
+  var geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(30), 3));
+  geometry.setDrawRange(0, 0);
+  var material = new THREE.LineBasicMaterial({
+    color: lyricThreeColor(stageLyrics.palette.secondary, '#9cffdf', 0.42),
+    transparent: true,
+    opacity: 0,
+    depthTest: false,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending
+  });
+  var lines = new THREE.LineSegments(geometry, material);
+  lines.renderOrder = 43;
+  stageLyrics.group.add(lines);
+  stageLyrics.networkLines = lines;
+  return lines;
+}
+function updateLyricNetworkLines() {
+  var selected = normalizeLyricFlowMode(fx && fx.lyricFlowMode);
+  var active = selected === 'network' || (selected === 'auto' && stageLyrics.autoFlowMode === 'network');
+  var lines = active ? ensureLyricNetworkLines() : stageLyrics.networkLines;
+  if (!lines) return;
+  var nodes = stageLyrics.outgoing.slice(-4);
+  if (stageLyrics.current) nodes.push(stageLyrics.current);
+  if (!active || nodes.length < 2) {
+    lines.geometry.setDrawRange(0, 0);
+    lines.material.opacity = 0;
+    return;
+  }
+  var positions = lines.geometry.attributes.position.array;
+  var cursor = 0;
+  for (var i = 1; i < nodes.length && cursor + 5 < positions.length; i++) {
+    positions[cursor++] = nodes[i - 1].position.x;
+    positions[cursor++] = nodes[i - 1].position.y;
+    positions[cursor++] = nodes[i - 1].position.z - 0.02;
+    positions[cursor++] = nodes[i].position.x;
+    positions[cursor++] = nodes[i].position.y;
+    positions[cursor++] = nodes[i].position.z - 0.02;
+  }
+  lines.geometry.setDrawRange(0, cursor / 3);
+  lines.geometry.attributes.position.needsUpdate = true;
+  lines.material.color.copy(lyricThreeColor(stageLyrics.palette.secondary, '#9cffdf', 0.42));
+  lines.material.opacity += (0.24 - lines.material.opacity) * 0.14;
 }
 
 function ensureLyricStarRiver() {
@@ -5741,7 +5806,8 @@ function normalizePerformanceQuality(v) {
   return /^(eco|balanced|high|ultra)$/.test(value) ? value : fxDefaults.performanceQuality;
 }
 function normalizeLyricFlowMode(value) {
-  return String(value || '') === 'cascade' ? 'cascade' : 'single';
+  value = String(value || '');
+  return /^(single|cascade|auto|float|hero|slant|cloud|network|geometry)$/.test(value) ? value : 'single';
 }
 function coverParticleGridForResolution(v) {
   var grid = Math.round(118 * normalizeCoverResolution(v));
@@ -7039,11 +7105,12 @@ function makeLyricShaderMaterial(mask, pal) {
   });
 }
 
-function buildLyricMesh(text) {
+function buildLyricMesh(text, flowMode) {
   text = String(text || '').replace(/\s+/g, ' ').trim();
   var mask = makeLyricMask(text);
   var pal = stageLyrics.palette;
-  var cascadeMode = isCascadeLyricFlow();
+  flowMode = normalizeLyricFlowMode(flowMode || fx.lyricFlowMode);
+  var cascadeMode = flowMode === 'cascade' || flowMode === 'cloud' || flowMode === 'network';
   var worldW = 6.10;
   var worldH = worldW * (mask.height / mask.width);
   var geo = new THREE.PlaneGeometry(worldW, worldH, 1, 1);
@@ -7183,7 +7250,8 @@ function showStageLine(text, redrawOnly) {
   createLyricsParticles();
   if (!stageLyrics.group) return;
   if (!text) { clearStageLyrics(); return; }
-  var cascadeMode = isCascadeLyricFlow();
+  var resolvedMode = resolvedLyricFlowMode(!redrawOnly);
+  var cascadeMode = resolvedMode === 'cascade' || resolvedMode === 'cloud' || resolvedMode === 'network';
   if (redrawOnly && stageLyrics.current) {
     disposeLyricMesh(stageLyrics.current);
     stageLyrics.current = null;
@@ -7191,14 +7259,16 @@ function showStageLine(text, redrawOnly) {
     stageLyrics.current.userData.state = cascadeMode ? 'cascade' : 'out';
     stageLyrics.current.userData.age = 0;
     stageLyrics.current.userData.cascadeLife = 0;
-    stageLyrics.current.userData.flowMode = cascadeMode ? 'cascade' : 'single';
+    stageLyrics.current.userData.flowMode = stageLyrics.current.userData.resolvedFlowMode || (cascadeMode ? 'cascade' : 'single');
     stageLyrics.outgoing.push(stageLyrics.current);
   }
   if (cascadeMode) {
     while (stageLyrics.outgoing.length > 5) disposeLyricMesh(stageLyrics.outgoing.shift());
   }
   stageLyrics.currentText = text;
-  var mesh = buildLyricMesh(text);
+  var mesh = buildLyricMesh(text, resolvedMode);
+  mesh.userData.resolvedFlowMode = resolvedMode;
+  mesh.userData.flowMode = resolvedMode;
   stageLyrics.group.add(mesh);
   stageLyrics.current = mesh;
 }
@@ -7217,6 +7287,10 @@ function clearStageLyrics() {
   stageLyrics.currentIdx = -1;
   stageLyrics.currentText = '';
   while (stageLyrics.outgoing.length) disposeLyricMesh(stageLyrics.outgoing.pop());
+  if (stageLyrics.networkLines) {
+    stageLyrics.networkLines.geometry.setDrawRange(0, 0);
+    stageLyrics.networkLines.material.opacity = 0;
+  }
 }
 
 function updateStageLyrics3D(dt) {
@@ -7378,7 +7452,8 @@ function updateStageLyrics3D(dt) {
   function tickMesh(mesh, isCurrent, stackIndex) {
     if (!mesh) return false;
     mesh.userData.age += dt;
-    var cascadeLine = mesh.userData.flowMode === 'cascade';
+    var lyricSceneMode = mesh.userData.resolvedFlowMode || mesh.userData.flowMode || 'single';
+    var cascadeLine = lyricSceneMode === 'cascade' || lyricSceneMode === 'cloud' || lyricSceneMode === 'network';
     if (cascadeLine) mesh.userData.cascadeLife = (mesh.userData.cascadeLife || 0) + dt * (0.76 + Math.min(0.62, stageLyrics.beatGlow * 0.18 + beatPulse * 0.24));
     var a = Math.min(1, mesh.userData.age / (isCurrent ? 0.52 : 0.38));
     a = a * a * (3 - 2 * a);
@@ -7461,18 +7536,51 @@ function updateStageLyrics3D(dt) {
         }
         mesh.scale.setScalar(mouthMeshScale);
         mesh.rotation.z = Math.sin(t * 0.30 + seed) * 0.010;
+      } else if (lyricSceneMode === 'hero') {
+        mesh.userData.skullMouthMeshLocked = false;
+        var heroScale = 1.18 + a * 0.22 + bass * 0.075 + beatPulse * 0.035;
+        mesh.scale.setScalar(heroScale);
+        mesh.position.x += (0 - mesh.position.x) * 0.18;
+        mesh.position.y += ((0.14 + Math.sin(t * 0.42 + seed) * 0.025) - mesh.position.y) * 0.14;
+        mesh.position.z += ((1.52 + Math.cos(t * 0.31 + seed) * 0.035) - mesh.position.z) * 0.12;
+        mesh.rotation.z *= 0.82;
+      } else if (lyricSceneMode === 'slant') {
+        mesh.userData.skullMouthMeshLocked = false;
+        var slantSide = Math.sin(seed * 8.71) >= 0 ? 1 : -1;
+        mesh.position.x += ((slantSide * (0.34 - a * 0.28) + Math.sin(t * 0.34 + seed) * 0.08) - mesh.position.x) * 0.16;
+        mesh.position.y += ((0.18 + Math.cos(t * 0.48 + seed) * 0.06) - mesh.position.y) * 0.12;
+        mesh.position.z += ((1.48 + Math.sin(t * 0.25 + seed) * 0.08) - mesh.position.z) * 0.10;
+        mesh.scale.setScalar(0.98 + a * 0.08 + bass * 0.04);
+        mesh.rotation.z = slantSide * (-0.10 + Math.sin(t * 0.40 + seed) * 0.025);
+      } else if (lyricSceneMode === 'geometry') {
+        mesh.userData.skullMouthMeshLocked = false;
+        var geoPulse = 1 + Math.max(stageLyrics.beatGlow, beatPulse) * 0.09;
+        mesh.position.x += ((Math.sin(t * 0.62 + seed) * 0.16) - mesh.position.x) * 0.12;
+        mesh.position.y += ((0.18 + Math.cos(t * 0.78 + seed) * 0.10) - mesh.position.y) * 0.12;
+        mesh.position.z += ((1.46 + Math.sin(t * 0.51 + seed) * 0.10) - mesh.position.z) * 0.10;
+        mesh.scale.set(geoPulse * (0.94 + a * 0.06), geoPulse * (0.88 + a * 0.10), 1);
+        mesh.rotation.z = Math.sin(t * 0.72 + seed) * 0.075;
       } else if (cascadeLine) {
         mesh.userData.skullMouthMeshLocked = false;
         var cBreath = Math.sin(t * 0.55 + seed) * 0.018 + Math.sin(t * 1.12 + seed) * 0.010;
         var cBeat = fx.lyricGlowBeat ? stageLyrics.beatGlow : 0;
-        var currentY = 0.46 + cBreath;
+        var sceneSpread = lyricSceneMode === 'cloud' ? 0.22 : (lyricSceneMode === 'network' ? 0.12 : 0);
+        var currentY = 0.46 + cBreath + Math.cos(seed * 5.7) * sceneSpread;
         var currentZ = 1.50 + Math.cos(t * 0.36 + seed) * 0.032;
         var currentScale = 0.78 + a * 0.045 + bass * 0.020 + cBeat * 0.010;
-        mesh.position.x += (0 - mesh.position.x) * 0.12;
+        var currentX = sceneSpread ? Math.sin(seed * 9.3) * (lyricSceneMode === 'cloud' ? 0.72 : 0.48) : 0;
+        mesh.position.x += (currentX - mesh.position.x) * 0.12;
         mesh.position.y += (currentY - mesh.position.y) * 0.18;
         mesh.position.z += (currentZ - mesh.position.z) * 0.14;
         mesh.scale.setScalar(currentScale);
-        mesh.rotation.z = Math.sin(t * 0.25 + seed) * 0.010;
+        mesh.rotation.z = lyricSceneMode === 'cloud' ? Math.sin(seed * 4.9) * 0.055 : Math.sin(t * 0.25 + seed) * 0.010;
+      } else if (lyricSceneMode === 'float') {
+        mesh.userData.skullMouthMeshLocked = false;
+        mesh.scale.setScalar(0.94 + a * 0.06 + breathe * 0.72 + bass * 0.03);
+        mesh.position.x += ((Math.sin(t * 0.29 + seed) * 0.28) - mesh.position.x) * 0.065;
+        mesh.position.y += ((0.18 + Math.sin(t * 0.43 + seed) * 0.15) - mesh.position.y) * 0.065;
+        mesh.position.z += ((1.48 + Math.cos(t * 0.35 + seed) * 0.13) - mesh.position.z) * 0.065;
+        mesh.rotation.z = Math.sin(t * 0.31 + seed) * 0.035;
       } else {
         mesh.userData.skullMouthMeshLocked = false;
         mesh.scale.setScalar(0.96 + a * 0.055 + breathe + bass * 0.038 + beatPulse * 0.014);
@@ -7505,14 +7613,17 @@ function updateStageLyrics3D(dt) {
       var fade = clampRange(1 - life / 6.2, 0, 1);
       var slotFade = clampRange(1 - (stackIndex - 1) * 0.16, 0.26, 1);
       var cascadeOpacity = fade * slotFade * shelfDetailLyricProfile.outgoing;
-      var lineY = 0.46 - stackIndex * 0.39 - life * 0.018;
+      var cloudMode = lyricSceneMode === 'cloud';
+      var networkMode = lyricSceneMode === 'network';
+      var lineY = 0.46 - stackIndex * (cloudMode ? 0.30 : 0.39) - life * 0.018 + (cloudMode ? Math.cos((mesh.userData.floatSeed || 0) * 5.7) * 0.18 : 0);
       var lineZ = 1.50 - stackIndex * 0.045 - life * 0.026;
       var lineScale = Math.max(0.46, 0.74 - stackIndex * 0.050 - life * 0.010);
-      mesh.position.x += (0 - mesh.position.x) * 0.10;
+      var lineX = (cloudMode || networkMode) ? Math.sin((mesh.userData.floatSeed || 0) * 9.3 + stackIndex) * (cloudMode ? 0.76 : 0.48) : 0;
+      mesh.position.x += (lineX - mesh.position.x) * 0.10;
       mesh.position.y += (lineY - mesh.position.y) * 0.16;
       mesh.position.z += (lineZ - mesh.position.z) * 0.13;
       mesh.scale.setScalar(lineScale);
-      mesh.rotation.z = Math.sin(t * 0.20 + (mesh.userData.floatSeed || 0)) * 0.006;
+      mesh.rotation.z = cloudMode ? Math.sin((mesh.userData.floatSeed || 0) * 4.9) * 0.055 : Math.sin(t * 0.20 + (mesh.userData.floatSeed || 0)) * 0.006;
       if (data.textMat) data.textMat.uniforms.uOpacity.value = cascadeOpacity;
       if (data.readabilityMat) data.readabilityMat.opacity = cascadeOpacity * (shelfDetailOpen ? shelfDetailLyricProfile.readability : 0.50);
       if (data.textMat && data.textMat.uniforms.uSolar) data.textMat.uniforms.uSolar.value *= shelfDetailOpen ? 0.76 : 0.90;
@@ -7548,6 +7659,7 @@ function updateStageLyrics3D(dt) {
       stageLyrics.outgoing.splice(i, 1);
     }
   }
+  updateLyricNetworkLines();
 }
 
 function getLyricLineProgress(line, nextLine, now) {
@@ -7624,6 +7736,12 @@ function tickLyricsParticles() {
 
 function disposeLyricsParticles() {
   clearStageLyrics();
+  if (stageLyrics.networkLines) {
+    if (stageLyrics.networkLines.parent) stageLyrics.networkLines.parent.remove(stageLyrics.networkLines);
+    if (stageLyrics.networkLines.geometry) stageLyrics.networkLines.geometry.dispose();
+    if (stageLyrics.networkLines.material) stageLyrics.networkLines.material.dispose();
+    stageLyrics.networkLines = null;
+  }
   if (stageLyrics.starRiver) {
     if (stageLyrics.starRiver.parent) stageLyrics.starRiver.parent.remove(stageLyrics.starRiver);
     if (stageLyrics.starRiver.geometry) stageLyrics.starRiver.geometry.dispose();
@@ -20974,10 +21092,14 @@ function setLyricFlowMode(mode, silent) {
     return;
   }
   fx.lyricFlowMode = next;
+  if (next === 'auto') stageLyrics.autoFlowLinesRemaining = 0;
   clearStageLyrics();
   updateLyricFlowControls();
   saveLyricLayout();
-  if (!silent) showToast(next === 'cascade' ? '歌词效果: 纵向淡出' : '歌词效果: 单行');
+  if (!silent) {
+    var labels = { single:'单行', cascade:'纵向淡出', auto:'幻彩自动', float:'浮游', hero:'巨幕', slant:'斜切', cloud:'词云', network:'连线', geometry:'几何' };
+    showToast('歌词效果: ' + (labels[next] || '单行'));
+  }
 }
 function updatePerformanceControls() {
   fx.performanceBackground = normalizePerformanceBackgroundMode(fx.performanceBackground, fx.liveBackgroundKeep === true);
