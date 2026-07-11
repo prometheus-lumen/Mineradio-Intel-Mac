@@ -22902,6 +22902,18 @@ function renderTopAccountPill(provider) {
     vipTag +
   '</span>';
 }
+function sanitizeQQDisplayName(value, userId) {
+  var name = String(value || '').replace(/\s+/g, ' ').trim();
+  if (!name) return '';
+  var compact = name.replace(/\s+/g, '');
+  var idDigits = String(userId || '').replace(/\D/g, '').replace(/^0+/, '');
+  var nameDigits = compact.replace(/\D/g, '').replace(/^0+/, '');
+  if (idDigits && nameDigits === idDigits && /^\D*\d+\D*$/.test(compact)) return '';
+  if (/^QQ\s*\d{5,}$/i.test(name)) return '';
+  if (/^(?=[a-f\d]{14,64}$)(?=.*[a-f])(?=.*\d)[a-f\d]+$/i.test(compact)) return '';
+  if (/^(?:openid[:_-]?)?[A-Za-z\d_-]{24,}$/i.test(compact) && /\d/.test(compact)) return '';
+  return name;
+}
 async function refreshLoginStatus(force) {
   try {
     var info = await apiJson('/api/login/status?t=' + Date.now());
@@ -22943,11 +22955,12 @@ function normalizeQQLoginStatus(info) {
     vipType: Number(info && (info.vipType || info.vip_type) || 0) || 0,
     stale: !!(info && info.stale)
   });
+  var userId = info.userId || info.uin || '';
   return Object.assign({}, fallback, info, {
     provider: 'qq',
     loggedIn: true,
-    nickname: info.nickname || fallback.nickname,
-    userId: info.userId || info.uin || '',
+    nickname: sanitizeQQDisplayName(info.nickname, userId) || fallback.nickname,
+    userId: userId,
     avatar: info.avatar || '',
     vipType: Number(info.vipType || info.vip_type || 0) || 0,
     playbackKeyReady: !!info.playbackKeyReady,
@@ -23213,11 +23226,12 @@ async function openQQWebLogin() {
     qqManualCookieOpen = false;
     renderUserBtn();
     refreshUserPlaylists(true);
-    var qqPlaybackReady = !!info.playbackKeyReady && !result.partial;
-    if (statusEl) { statusEl.textContent = qqPlaybackReady ? 'QQ 音乐会话已保存' : 'QQ 账号已同步，播放授权不完整，部分歌曲会自动换源'; statusEl.className = 'scan'; }
+    var qqPlaybackReady = !!info.playbackKeyReady;
+    if (!qqPlaybackReady) throw new Error('未获得 QQ 音乐播放授权，原登录未被覆盖');
+    if (statusEl) { statusEl.textContent = 'QQ 音乐会话已保存'; statusEl.className = 'scan'; }
     setTimeout(function(){
       closeLoginModal();
-      showToast((qqPlaybackReady ? 'QQ 音乐已登录: ' : 'QQ 账号已同步: ') + (info.nickname || info.userId || ''));
+      showToast('QQ 音乐已登录: ' + (info.nickname || info.userId || ''));
     }, 420);
   } catch (e) {
     qqWebLoginBusy = false;
@@ -23256,10 +23270,11 @@ async function submitQQCookieLogin() {
     renderUserBtn();
     refreshUserPlaylists(true);
     var manualQQPlaybackReady = !!info.playbackKeyReady;
-    if (statusEl) { statusEl.textContent = manualQQPlaybackReady ? 'QQ 音乐会话已保存' : 'QQ 账号已同步，播放授权不完整，部分歌曲会自动换源'; statusEl.className = 'scan'; }
+    if (!manualQQPlaybackReady) throw new Error('未检测到 QQ 音乐播放授权，普通 QQ Cookie 不会覆盖现有会话');
+    if (statusEl) { statusEl.textContent = 'QQ 音乐会话已保存'; statusEl.className = 'scan'; }
     setTimeout(function(){
       closeLoginModal();
-      showToast((manualQQPlaybackReady ? 'QQ 音乐已登录: ' : 'QQ 账号已同步: ') + (info.nickname || info.userId || ''));
+      showToast('QQ 音乐已登录: ' + (info.nickname || info.userId || ''));
     }, 420);
   } catch (e) {
     if (statusEl) { statusEl.textContent = e && e.message ? e.message : 'QQ 会话保存失败'; statusEl.className = 'fail'; }

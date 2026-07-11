@@ -744,8 +744,9 @@ async function openNeteaseMusicLoginWindow(owner) {
 
 async function openQQMusicLoginWindow(owner) {
   const cookieSession = session.fromPartition(QQ_LOGIN_PARTITION);
-  const initialCookie = await readQQLoginCookieHeader(cookieSession);
-  if (qqCookieHasPlaybackLogin(initialCookie)) return { ok: true, cookie: initialCookie, reused: true };
+  await cookieSession.clearStorageData({
+    storages: ['cookies', 'localstorage', 'indexdb', 'cachestorage'],
+  });
 
   return new Promise((resolve) => {
     let settled = false;
@@ -831,9 +832,9 @@ async function openQQMusicLoginWindow(owner) {
       if (pollTimer) clearInterval(pollTimer);
       try {
         const cookie = await readQQLoginCookieHeader(cookieSession);
-        resolve(qqCookieHasLogin(cookie)
+        resolve(qqCookieHasPlaybackLogin(cookie)
           ? { ok: true, cookie }
-          : { ok: false, cancelled: true, message: 'QQ 登录窗口已关闭' });
+          : { ok: false, cancelled: true, message: '未获得 QQ 音乐播放授权，原登录未被覆盖' });
       } catch (e) {
         resolve({ ok: false, error: e.message || 'QQ 登录窗口已关闭' });
       }

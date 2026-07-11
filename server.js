@@ -1534,6 +1534,17 @@ function decodeQQCookieValue(value) {
   try { return decodeURIComponent(String(value || '').replace(/\+/g, '%20')).trim(); }
   catch (e) { return String(value || '').trim(); }
 }
+function sanitizeQQNickname(value, uin) {
+  const name = decodeQQCookieValue(value).replace(/\s+/g, ' ').trim();
+  if (!name) return '';
+  const compact = name.replace(/\s+/g, '');
+  const normalizedUin = normalizeQQUin(uin);
+  if (normalizedUin && normalizeQQUin(compact) === normalizedUin && /^\D*\d+\D*$/.test(compact)) return '';
+  if (/^QQ\s*\d{5,}$/i.test(name)) return '';
+  if (/^(?=[a-f\d]{14,64}$)(?=.*[a-f])(?=.*\d)[a-f\d]+$/i.test(compact)) return '';
+  if (/^(?:openid[:_-]?)?[A-Za-z\d_-]{24,}$/i.test(compact) && /\d/.test(compact)) return '';
+  return name;
+}
 function qqCookieNickname(obj, uin) {
   obj = obj || qqCookieObject();
   uin = normalizeQQUin(uin || qqCookieUin(obj));
@@ -1548,12 +1559,12 @@ function qqCookieNickname(obj, uin) {
   ].filter(Boolean);
   for (const key of keys) {
     if (obj[key]) {
-      const nick = decodeQQCookieValue(obj[key]);
+      const nick = sanitizeQQNickname(obj[key], uin);
       if (nick) return nick;
     }
   }
   const ptnickKey = Object.keys(obj).find(key => /^ptnick_/i.test(key) && obj[key]);
-  return ptnickKey ? decodeQQCookieValue(obj[ptnickKey]) : '';
+  return ptnickKey ? sanitizeQQNickname(obj[ptnickKey], uin) : '';
 }
 function qqCookieAvatar(obj, uin) {
   obj = obj || qqCookieObject();
@@ -2354,7 +2365,7 @@ function normalizeQQProfile(body, cookieObj) {
   const data = (body && (body.data || body.profile || body.creator || body.result)) || {};
   const creator = (data.creator || data.user || data.profile || data) || {};
   const vipInfo = data.vipInfo || data.vipinfo || data.vip || creator.vipInfo || creator.vipinfo || {};
-  const profileNick = creator.nick || creator.nickname || creator.name || creator.hostname || creator.title || '';
+  const profileNick = sanitizeQQNickname(creator.nick || creator.nickname || creator.name || creator.hostname || creator.title || '', uin);
   const profileAvatar = creator.headpic || creator.avatar || creator.avatarUrl || creator.logo || '';
   const cookieNick = qqCookieNickname(cookieObj, uin);
   const nick = profileNick || cookieNick || '';
@@ -2371,10 +2382,10 @@ function normalizeQQProfile(body, cookieObj) {
   }
   return {
     provider: 'qq',
-    loggedIn: !!(uin && qqCookieMusicKey(cookieObj)),
+    loggedIn: !!(uin && qqCookiePlaybackKey(cookieObj)),
     preview: false,
     userId: uin,
-    nickname: nick || (uin ? ('QQ ' + uin) : 'QQ 音乐'),
+    nickname: nick || 'QQ 音乐',
     avatar,
     vipType,
     hasCookie: !!qqCookie,
@@ -2386,8 +2397,8 @@ function normalizeQQProfile(body, cookieObj) {
 async function getQQLoginInfo() {
   const cookieObj = qqCookieObject();
   const uin = qqCookieUin(cookieObj);
-  const musicKey = qqCookieMusicKey(cookieObj);
-  if (!uin || !musicKey) return { provider: 'qq', loggedIn: false, hasCookie: !!qqCookie };
+  const playbackKey = qqCookiePlaybackKey(cookieObj);
+  if (!uin || !playbackKey) return { provider: 'qq', loggedIn: false, hasCookie: !!qqCookie, playbackKeyReady: false };
   const fallback = normalizeQQProfile(null, cookieObj);
   try {
     const u = new URL('https://c.y.qq.com/rsc/fcgi-bin/fcg_get_profile_homepage.fcg');
@@ -3573,8 +3584,8 @@ const server = http.createServer(async (req, res) => {
       const raw = body.cookie || body.data || body.text || '';
       const normalized = normalizeQQCookieInput(raw);
       const obj = parseCookieString(normalized);
-      if (!qqCookieUin(obj) || !qqCookieMusicKey(obj)) {
-        sendJSON(res, { provider: 'qq', loggedIn: false, error: 'INVALID_QQ_COOKIE', message: 'QQ cookie 缺少 uin 或有效登录票据' }, 400);
+      if (!qqCookieUin(obj) || !qqCookiePlaybackKey(obj)) {
+        sendJSON(res, { provider: 'qq', loggedIn: false, error: 'INVALID_QQ_MUSIC_COOKIE', message: '未检测到 QQ 音乐播放授权，普通 QQ 登录不会覆盖现有会话' }, 400);
         return;
       }
       saveQQCookie(normalized);
