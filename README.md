@@ -1,4 +1,4 @@
-![img_0.png](docs/assets/img_0.png)
+![img_0.png](docs/assets/readme/img_0.png)
 
 ## 基于Mineradio 针对Mac intel 进行优化 
 * 当前 Intel Mac 仓库及更新发布页：https://github.com/prometheus-lumen/Mineradio-Intel-Mac
