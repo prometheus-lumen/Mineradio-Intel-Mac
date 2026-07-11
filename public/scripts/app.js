@@ -110,6 +110,20 @@ function setPlaylistSourceFilter(source) {
   resetPlaylistPanelRenderLimit();
   renderUserPlaylistsList({ animate: true, reset: true });
 }
+function collapsePlaylistPanelDetail() {
+  if (!playlistPanelDetailState || !playlistPanelDetailState.key) return;
+  playlistPanelDetailState = {
+    key: '',
+    loading: false,
+    playlist: null,
+    tracks: [],
+    token: (playlistPanelDetailState.token || 0) + 1,
+    renderLimit: PLAYLIST_DETAIL_INITIAL_RENDER
+  };
+  renderUserPlaylistsList({ animate: true });
+  requestAnimationFrame(function(){ scrollPlaylistPanelToTop(); });
+  showToast('已收起歌单歌曲');
+}
 var HOTKEY_ACTIONS = [
   { key:'togglePlay', label:'播放 / 暂停', category:'播放', local:'Space', global:'Ctrl+Alt+Space' },
   { key:'prevTrack', label:'上一首', category:'播放', local:'ArrowLeft', global:'Ctrl+Alt+ArrowLeft' },
@@ -5494,7 +5508,7 @@ function resolvedLyricFlowMode(advance) {
     var index = Math.floor(Math.random() * LYRIC_SCENE_MODES.length);
     if (LYRIC_SCENE_MODES[index] === previous) index = (index + 1) % LYRIC_SCENE_MODES.length;
     stageLyrics.autoFlowMode = LYRIC_SCENE_MODES[index];
-    stageLyrics.autoFlowLinesRemaining = 1 + Math.floor(Math.random() * 3);
+    stageLyrics.autoFlowLinesRemaining = 2 + Math.floor(Math.random() * 2);
   }
   return stageLyrics.autoFlowMode;
 }
@@ -5621,7 +5635,7 @@ function updateLyricNetworkLines() {
   lines.geometry.setDrawRange(0, cursor / 3);
   lines.geometry.attributes.position.needsUpdate = true;
   lines.material.color.copy(lyricThreeColor(stageLyrics.palette.secondary, '#9cffdf', 0.42));
-  lines.material.opacity += (0.24 - lines.material.opacity) * 0.14;
+  lines.material.opacity += (0.38 - lines.material.opacity) * 0.18;
 }
 
 function ensureLyricStarRiver() {
@@ -7557,9 +7571,9 @@ function updateStageLyrics3D(dt) {
       } else if (lyricSceneMode === 'geometry') {
         mesh.userData.skullMouthMeshLocked = false;
         var geoPulse = 1 + Math.max(stageLyrics.beatGlow, beatPulse) * 0.09;
-        mesh.position.x += ((Math.sin(t * 0.62 + seed) * 0.16) - mesh.position.x) * 0.12;
-        mesh.position.y += ((0.18 + Math.cos(t * 0.78 + seed) * 0.10) - mesh.position.y) * 0.12;
-        mesh.position.z += ((1.46 + Math.sin(t * 0.51 + seed) * 0.10) - mesh.position.z) * 0.10;
+        mesh.position.x += ((Math.sin(t * 0.72 + seed) * 0.34) - mesh.position.x) * 0.15;
+        mesh.position.y += ((0.18 + Math.cos(t * 0.92 + seed) * 0.18) - mesh.position.y) * 0.15;
+        mesh.position.z += ((1.46 + Math.sin(t * 0.58 + seed) * 0.16) - mesh.position.z) * 0.13;
         mesh.scale.setScalar(geoPulse * (0.94 + a * 0.06));
         mesh.rotation.z = Math.sin(t * 0.72 + seed) * 0.16;
       } else if (lyricSceneMode === 'scatter') {
@@ -7583,19 +7597,19 @@ function updateStageLyrics3D(dt) {
       } else if (lyricSceneMode === 'orbit') {
         mesh.userData.skullMouthMeshLocked = false;
         var orbitPhase = t * 0.72 + seed;
-        mesh.position.x += ((Math.sin(orbitPhase) * 0.72) - mesh.position.x) * 0.15;
-        mesh.position.y += ((0.16 + Math.cos(orbitPhase) * 0.34) - mesh.position.y) * 0.15;
-        mesh.position.z += ((1.46 + Math.sin(orbitPhase * 0.72) * 0.24) - mesh.position.z) * 0.13;
+        mesh.position.x += ((Math.sin(orbitPhase) * 0.90) - mesh.position.x) * 0.18;
+        mesh.position.y += ((0.16 + Math.cos(orbitPhase) * 0.42) - mesh.position.y) * 0.18;
+        mesh.position.z += ((1.46 + Math.sin(orbitPhase * 0.72) * 0.28) - mesh.position.z) * 0.16;
         mesh.scale.setScalar(0.78 + (Math.cos(orbitPhase) + 1) * 0.18 + beatPulse * 0.05);
         mesh.rotation.z = Math.sin(orbitPhase * 0.64) * 0.18;
       } else if (lyricSceneMode === 'wave') {
         mesh.userData.skullMouthMeshLocked = false;
         var wavePhase = t * 1.18 + seed;
-        mesh.position.x += ((Math.sin(wavePhase) * 0.48) - mesh.position.x) * 0.18;
-        mesh.position.y += ((0.16 + Math.sin(wavePhase * 1.42) * 0.30) - mesh.position.y) * 0.18;
-        mesh.position.z += ((1.48 + Math.cos(wavePhase) * 0.14) - mesh.position.z) * 0.14;
+        mesh.position.x += ((Math.sin(wavePhase) * 0.66) - mesh.position.x) * 0.21;
+        mesh.position.y += ((0.16 + Math.sin(wavePhase * 1.42) * 0.38) - mesh.position.y) * 0.21;
+        mesh.position.z += ((1.48 + Math.cos(wavePhase) * 0.18) - mesh.position.z) * 0.17;
         mesh.scale.setScalar(0.98 + Math.sin(wavePhase) * 0.08);
-        mesh.rotation.z = Math.cos(wavePhase) * 0.14;
+        mesh.rotation.z = Math.cos(wavePhase) * 0.18;
       } else if (lyricSceneMode === 'flip') {
         mesh.userData.skullMouthMeshLocked = false;
         var flipPhase = Math.sin(t * 1.35 + seed);
@@ -7603,7 +7617,7 @@ function updateStageLyrics3D(dt) {
         mesh.position.y += ((0.16 + Math.cos(t * 0.68 + seed) * 0.08) - mesh.position.y) * 0.18;
         mesh.position.z += ((1.50 + Math.abs(flipPhase) * 0.18) - mesh.position.z) * 0.16;
         mesh.scale.setScalar(0.94 + Math.abs(flipPhase) * 0.08);
-        mesh.rotation.y = flipPhase * 0.34;
+        mesh.rotation.y = flipPhase * 0.48;
         mesh.rotation.z = Math.sin(t * 0.44 + seed) * 0.04;
       } else if (lyricSceneMode === 'sweep') {
         mesh.userData.skullMouthMeshLocked = false;
@@ -7626,24 +7640,24 @@ function updateStageLyrics3D(dt) {
       } else if (lyricSceneMode === 'pendulum') {
         mesh.userData.skullMouthMeshLocked = false;
         var pendulumPhase = Math.sin(t * 0.74 + seed);
-        mesh.position.x += ((pendulumPhase * 0.54) - mesh.position.x) * 0.15;
-        mesh.position.y += ((0.22 - Math.abs(pendulumPhase) * 0.10) - mesh.position.y) * 0.15;
+        mesh.position.x += ((pendulumPhase * 0.72) - mesh.position.x) * 0.18;
+        mesh.position.y += ((0.24 - Math.abs(pendulumPhase) * 0.14) - mesh.position.y) * 0.18;
         mesh.position.z += ((1.50 + Math.cos(t * 0.74 + seed) * 0.08) - mesh.position.z) * 0.13;
         mesh.scale.setScalar(0.98 + beatPulse * 0.04);
-        mesh.rotation.z = pendulumPhase * 0.13;
+        mesh.rotation.z = pendulumPhase * 0.18;
       } else if (lyricSceneMode === 'depth') {
         mesh.userData.skullMouthMeshLocked = false;
         var depthPhase = 0.5 + 0.5 * Math.sin(t * 0.66 + seed);
         mesh.position.x += ((Math.sin(t * 0.31 + seed) * 0.16) - mesh.position.x) * 0.14;
         mesh.position.y += ((0.18 + Math.cos(t * 0.42 + seed) * 0.08) - mesh.position.y) * 0.14;
-        mesh.position.z += ((1.26 + depthPhase * 0.42) - mesh.position.z) * 0.15;
-        mesh.scale.setScalar(0.88 + depthPhase * 0.20);
+        mesh.position.z += ((1.18 + depthPhase * 0.62) - mesh.position.z) * 0.18;
+        mesh.scale.setScalar(0.84 + depthPhase * 0.28);
         mesh.rotation.z = Math.sin(t * 0.28 + seed) * 0.04;
       } else if (lyricSceneMode === 'drift') {
         mesh.userData.skullMouthMeshLocked = false;
         var driftPhase = t * 0.36 + seed;
-        mesh.position.x += ((Math.sin(driftPhase) * 0.62) - mesh.position.x) * 0.10;
-        mesh.position.y += ((0.16 + Math.cos(driftPhase * 1.24) * 0.18) - mesh.position.y) * 0.10;
+        mesh.position.x += ((Math.sin(driftPhase) * 0.78) - mesh.position.x) * 0.12;
+        mesh.position.y += ((0.16 + Math.cos(driftPhase * 1.24) * 0.24) - mesh.position.y) * 0.12;
         mesh.position.z += ((1.48 + Math.sin(driftPhase * 0.72) * 0.12) - mesh.position.z) * 0.10;
         mesh.scale.setScalar(0.97 + Math.sin(driftPhase * 0.82) * 0.05);
         mesh.rotation.z = Math.cos(driftPhase) * 0.065;
@@ -7653,14 +7667,14 @@ function updateStageLyrics3D(dt) {
         mesh.position.x += (0 - mesh.position.x) * 0.20;
         mesh.position.y += ((0.18 + pulseDrive * 0.09) - mesh.position.y) * 0.18;
         mesh.position.z += ((1.48 + pulseDrive * 0.14) - mesh.position.z) * 0.16;
-        mesh.scale.setScalar(0.96 + pulseDrive * 0.16);
+        mesh.scale.setScalar(0.94 + pulseDrive * 0.22);
         mesh.rotation.z = Math.sin(t * 0.38 + seed) * 0.035;
       } else if (lyricSceneMode === 'glide') {
         mesh.userData.skullMouthMeshLocked = false;
         var glideSide = Math.sin(seed * 7.17) >= 0 ? 1 : -1;
         var glideProgress = 1 - a;
-        mesh.position.x += ((glideSide * glideProgress * 0.78) - mesh.position.x) * 0.20;
-        mesh.position.y += ((0.18 - glideProgress * 0.16) - mesh.position.y) * 0.18;
+        mesh.position.x += ((glideSide * glideProgress * 0.98) - mesh.position.x) * 0.24;
+        mesh.position.y += ((0.18 - glideProgress * 0.22) - mesh.position.y) * 0.22;
         mesh.position.z += ((1.50 - glideProgress * 0.10) - mesh.position.z) * 0.15;
         mesh.scale.setScalar(0.92 + a * 0.08);
         mesh.rotation.z = -glideSide * glideProgress * 0.12;
@@ -7690,9 +7704,9 @@ function updateStageLyrics3D(dt) {
       } else if (lyricSceneMode === 'float') {
         mesh.userData.skullMouthMeshLocked = false;
         mesh.scale.setScalar(0.88 + a * 0.12 + breathe + bass * 0.05);
-        mesh.position.x += ((Math.sin(t * 0.42 + seed) * 0.58) - mesh.position.x) * 0.085;
-        mesh.position.y += ((0.18 + Math.sin(t * 0.56 + seed) * 0.28) - mesh.position.y) * 0.085;
-        mesh.position.z += ((1.48 + Math.cos(t * 0.44 + seed) * 0.24) - mesh.position.z) * 0.085;
+        mesh.position.x += ((Math.sin(t * 0.48 + seed) * 0.74) - mesh.position.x) * 0.11;
+        mesh.position.y += ((0.18 + Math.sin(t * 0.62 + seed) * 0.36) - mesh.position.y) * 0.11;
+        mesh.position.z += ((1.48 + Math.cos(t * 0.50 + seed) * 0.30) - mesh.position.z) * 0.11;
         mesh.rotation.z = Math.sin(t * 0.39 + seed) * 0.075;
       } else {
         mesh.userData.skullMouthMeshLocked = false;
@@ -19263,7 +19277,7 @@ function playlistPanelDetailHtml(pl, provider) {
   return '<div class="pl-inline-detail" data-pl-detail="' + escHtml(key) + '">' +
     '<div class="pl-detail-sticky">' +
       '<div class="pl-detail-head">' + img + '<div style="flex:1;min-width:0"><div class="pl-detail-title">' + escHtml(pl.name || '歌单详情') + '</div><div class="pl-detail-sub">' + escHtml((pl.trackCount || tracks.length || 0) + ' 首 · ' + (pl.creator || (provider === 'qq' ? 'QQ 音乐' : '网易云音乐'))) + '</div></div><div class="pl-detail-count">' + (loading ? '载入中' : (renderLimit + '/' + tracks.length)) + '</div></div>' +
-      '<div class="pl-detail-actions"><button class="pl-detail-play" type="button" data-pl-detail-play="' + escHtml(key) + '"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>播放歌单</button><button class="fx-mini-btn ghost pl-detail-top-btn" type="button" data-pl-detail-top="1">回到顶部</button></div>' +
+      '<div class="pl-detail-actions"><button class="pl-detail-play" type="button" data-pl-detail-play="' + escHtml(key) + '"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>播放歌单</button><button class="fx-mini-btn ghost pl-detail-collapse-btn" type="button" data-pl-detail-collapse="1">收起歌曲</button><button class="fx-mini-btn ghost pl-detail-top-btn" type="button" data-pl-detail-top="1">回到顶部</button></div>' +
     '</div>' +
     '<div class="pl-detail-list">' + rows + '</div>' +
   '</div>';
@@ -19466,6 +19480,13 @@ function renderMyPodcastCollections(opts) {
   if (opts.animate) animateVisiblePanelList($pod, '.pl-card', document.getElementById('playlist-panel'));
 }
 document.getElementById('pl-list').addEventListener('click', function(e){
+  var collapseDetail = e.target && e.target.closest ? e.target.closest('[data-pl-detail-collapse]') : null;
+  if (collapseDetail) {
+    e.preventDefault();
+    e.stopPropagation();
+    collapsePlaylistPanelDetail();
+    return;
+  }
   var loadMore = e.target && e.target.closest ? e.target.closest('[data-pl-load-more]') : null;
   if (loadMore) {
     e.preventDefault();
@@ -21261,7 +21282,7 @@ function setLyricFlowMode(mode, silent) {
   updateLyricFlowControls();
   saveLyricLayout();
   if (!silent) {
-    var labels = { single:'单行', cascade:'纵向淡出', auto:'幻变' };
+    var labels = { single:'单行', cascade:'纵向淡出', auto:'幻变模式' };
     showToast('歌词效果: ' + (labels[next] || '单行'));
   }
 }
@@ -27285,7 +27306,7 @@ function playlistPanelDetailHtml(pl, provider) {
   return '<div class="pl-inline-detail" data-pl-detail="' + escHtml(key) + '">' +
     '<div class="pl-detail-sticky">' +
       '<div class="pl-detail-head">' + img + '<div style="flex:1;min-width:0"><div class="pl-detail-title">' + escHtml(pl.name || '歌单详情') + '</div><div class="pl-detail-sub">' + escHtml((pl.trackCount || tracks.length || 0) + ' 首 · ' + (pl.creator || (provider === 'qq' ? 'QQ Music' : (provider === 'kugou' ? 'Kugou' : 'Netease')))) + '</div></div><div class="pl-detail-count">' + (loading ? '载入中' : (renderLimit + '/' + tracks.length)) + '</div></div>' +
-      '<div class="pl-detail-actions"><button class="pl-detail-play" type="button" data-pl-detail-play="' + escHtml(key) + '"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>播放歌单</button><button class="fx-mini-btn ghost pl-detail-top-btn" type="button" data-pl-detail-top="1">回到顶部</button></div>' +
+      '<div class="pl-detail-actions"><button class="pl-detail-play" type="button" data-pl-detail-play="' + escHtml(key) + '"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>播放歌单</button><button class="fx-mini-btn ghost pl-detail-collapse-btn" type="button" data-pl-detail-collapse="1">收起歌曲</button><button class="fx-mini-btn ghost pl-detail-top-btn" type="button" data-pl-detail-top="1">回到顶部</button></div>' +
     '</div>' +
     '<div class="pl-detail-list">' + rows + '</div>' +
   '</div>';
@@ -27493,6 +27514,13 @@ function renderMyPodcastCollections(opts) {
   if (opts.animate) animateVisiblePanelList($pod, '.pl-card', document.getElementById('playlist-panel'));
 }
 document.getElementById('pl-list').addEventListener('click', function(e){
+  var collapseDetail = e.target && e.target.closest ? e.target.closest('[data-pl-detail-collapse]') : null;
+  if (collapseDetail) {
+    e.preventDefault();
+    e.stopPropagation();
+    collapsePlaylistPanelDetail();
+    return;
+  }
   var loadMore = e.target && e.target.closest ? e.target.closest('[data-pl-load-more]') : null;
   if (loadMore) {
     e.preventDefault();

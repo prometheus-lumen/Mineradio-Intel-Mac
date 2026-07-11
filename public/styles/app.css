@@ -1476,6 +1476,7 @@ body.desktop-shell.diy-mode #bottom-bar.stage-mode{left:50%;width:min(1080px,cal
 .pl-detail-play{height:30px;min-width:98px;padding:0 12px;border-radius:999px;border:1px solid rgba(var(--fc-accent-rgb),.32);background:rgba(var(--fc-accent-rgb),.10);color:#fff;font:700 11.5px var(--font-sans);display:inline-flex;align-items:center;justify-content:center;gap:7px;cursor:pointer}
 .pl-detail-play svg{width:13px;height:13px;fill:currentColor}
 .pl-detail-top-btn{height:30px;min-width:82px;flex:0 0 auto;padding:0 12px}
+.pl-detail-collapse-btn{height:30px;min-width:76px;flex:0 0 auto;padding:0 11px}
 .pl-detail-list{display:flex;flex-direction:column;gap:6px;scroll-behavior:smooth}
 .pl-detail-row{display:flex;align-items:center;gap:9px;padding:7px;border-radius:10px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.04);cursor:pointer}
 .pl-detail-row:hover{background:rgba(255,255,255,.055)}
