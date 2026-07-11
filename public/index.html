@@ -735,6 +735,7 @@ try {
     <div class="login-platform-tabs" id="login-platform-tabs">
       <button id="login-provider-netease" class="netease active" type="button" onclick="setLoginProvider('netease')">网易云</button>
       <button id="login-provider-qq" class="qq" type="button" onclick="setLoginProvider('qq')">QQ 音乐</button>
+      <button id="login-provider-kugou" class="kugou" type="button" onclick="setLoginProvider('kugou')">酷狗音乐</button>
     </div>
     <div class="login-intro">
       <div class="login-intro-kicker">Mineradio</div>
@@ -776,11 +777,13 @@ try {
     <div class="user-platform-tabs" id="user-platform-tabs">
       <button id="user-provider-netease" class="netease active" type="button" onclick="setActiveAccountProvider('netease')">网易云</button>
       <button id="user-provider-qq" class="qq" type="button" onclick="setActiveAccountProvider('qq')">QQ 音乐</button>
+      <button id="user-provider-kugou" class="kugou" type="button" onclick="setActiveAccountProvider('kugou')">酷狗音乐</button>
       <button id="user-provider-both" class="both" type="button" onclick="enableDualAccountView()">我两个都要</button>
     </div>
     <div class="account-modal-actions">
       <button id="account-add-netease" class="modal-btn" onclick="openProviderLogin('netease')">补登网易云</button>
       <button id="account-add-qq" class="modal-btn" onclick="openProviderLogin('qq')">补登 QQ 音乐</button>
+      <button id="account-add-kugou" class="modal-btn" onclick="openProviderLogin('kugou')">补登酷狗音乐</button>
     </div>
     <div id="account-hint" class="account-hint">QQ 音乐真实登录暂未接入，当前先预览双平台账号交互。</div>
     <div class="btn-row">

@@ -941,6 +941,7 @@ body.login-guide-active #login-guide-canvas{opacity:1}
 .login-platform-tabs button.active,.user-platform-tabs button.active{color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08),0 10px 26px rgba(0,0,0,.20)}
 .login-platform-tabs button.netease.active,.user-platform-tabs button.netease.active{background:rgba(217,91,103,.16);color:#ffd7dc}
 .login-platform-tabs button.qq.active,.user-platform-tabs button.qq.active{background:rgba(191,214,107,.16);color:#f3ffd1}
+.login-platform-tabs button.kugou.active,.user-platform-tabs button.kugou.active{background:rgba(68,199,255,.16);color:#d9f6ff}
 .user-platform-tabs button.both.active{background:rgba(244,210,138,.14);color:#fff0bf}
 .qr-shell{position:relative;width:200px;height:200px;margin:0 auto 16px;border-radius:16px}
 #qr-img{width:200px;height:200px;background:#fff;border-radius:14px;margin:0 auto 16px;display:block;padding:10px;box-shadow:0 16px 42px rgba(0,0,0,.32),0 0 0 1px rgba(244,210,138,.18)}
@@ -972,6 +973,7 @@ body.login-guide-active #login-guide-canvas{opacity:1}
 .account-provider-chip{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 9px;margin-bottom:10px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.035);font-size:10.5px;letter-spacing:.5px;color:rgba(255,255,255,.58)}
 .account-provider-chip.netease{border-color:rgba(217,91,103,.26);color:#ffd7dc;background:rgba(217,91,103,.08)}
 .account-provider-chip.qq{border-color:rgba(191,214,107,.26);color:#f3ffd1;background:rgba(191,214,107,.08)}
+.account-provider-chip.kugou{border-color:rgba(68,199,255,.26);color:#d9f6ff;background:rgba(68,199,255,.08)}
 .account-modal-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
 .account-modal-actions .modal-btn{padding:8px 10px}
 .account-hint{margin-top:10px;font-size:11px;line-height:1.45;color:rgba(255,255,255,.38)}
