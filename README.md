@@ -1,4 +1,5 @@
 ![img_0.png](docs/assets/readme/img_0.png)
+![img_5.png](docs/assets/readme/img_5.png)
 # 说明
 当前项目由于是属于视觉特效优先，采用three.js做视觉效果以及electron编译打包，所以安装包体积稍微会大一些且比较吃CPU、GPU资源，本人的配置是2019pro，16英寸 i7-32g 目前来说属于能用但不算卡顿，请判断电脑配置是否可用后再进行下载。
 ## 基于Mineradio 针对Mac 进行优化 
