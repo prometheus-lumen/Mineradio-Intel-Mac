@@ -9068,7 +9068,7 @@ async function analyzeAudioBeats(audioUrl, durationSec, token, options) {
     var DecodeCtx = window.AudioContext || window.webkitAudioContext;
     var dc = new DecodeCtx();
     var buffer = await new Promise(function(resolve, reject){
-      dc.decodeAudioData(ab.slice(0), resolve, reject);
+      dc.decodeAudioData(ab, resolve, reject);
     }).catch(function(e){ console.warn('decode failed:', e); return null; });
     dc.close && dc.close();
     if (!buffer) { hideBeatChip(); return null; }
@@ -9080,7 +9080,7 @@ async function analyzeAudioBeats(audioUrl, durationSec, token, options) {
 
     // 用 OfflineAudioContext 分离低频重鼓 / 中频鼓身 / 高频敲击感.
     var sr = buffer.sampleRate;
-    async function renderBand(hpFreq, lpFreq) {
+    async function renderBandEnergy(hpFreq, lpFreq) {
       var off = new TmpCtx(1, buffer.length, sr);
       var src = off.createBufferSource(); src.buffer = buffer;
       var node = src;
@@ -9105,21 +9105,8 @@ async function analyzeAudioBeats(audioUrl, durationSec, token, options) {
       var renderedBand = await off.startRendering();
       if (token !== beatMapToken) return null;
       await yieldToIdle(beatAnalysisYieldMs(options, 110, 620));
-      return renderedBand.getChannelData(0);
+      return makeFrameEnergy(renderedBand.getChannelData(0));
     }
-    var bands = [];
-    bands.push(await renderBand(38, 155));
-    if (token !== beatMapToken || !bands[0]) { hideBeatChip(); return null; }
-    bands.push(await renderBand(130, 420));
-    if (token !== beatMapToken || !bands[1]) { hideBeatChip(); return null; }
-    bands.push(await renderBand(420, 2600));
-    if (token !== beatMapToken || !bands[2]) { hideBeatChip(); return null; }
-    bands.push(await renderBand(1800, 9000));
-    if (token !== beatMapToken) { hideBeatChip(); return null; }
-    var lowPcm = bands[0];
-    var bodyPcm = bands[1];
-    var vocalPcm = bands[2];
-    var snapPcm = bands[3];
 
     // 帧化能量 (10ms 窗口)
     var winSize = Math.floor(sr * 0.010);
@@ -9142,13 +9129,17 @@ async function analyzeAudioBeats(audioUrl, durationSec, token, options) {
       return out;
     }
     var frameBands = [];
-    frameBands.push(await makeFrameEnergy(lowPcm));
+    // 每个整首 PCM 频段在提取能量后立即释放，避免四份大缓冲同时驻留造成黑帧和整机卡顿。
+    frameBands.push(await renderBandEnergy(38, 155));
+    if (token !== beatMapToken || !frameBands[0]) { hideBeatChip(); return null; }
     await yieldToIdle(beatAnalysisYieldMs(options, 90, 520));
-    frameBands.push(await makeFrameEnergy(bodyPcm));
+    frameBands.push(await renderBandEnergy(130, 420));
+    if (token !== beatMapToken || !frameBands[1]) { hideBeatChip(); return null; }
     await yieldToIdle(beatAnalysisYieldMs(options, 90, 520));
-    frameBands.push(await makeFrameEnergy(vocalPcm));
+    frameBands.push(await renderBandEnergy(420, 2600));
+    if (token !== beatMapToken || !frameBands[2]) { hideBeatChip(); return null; }
     await yieldToIdle(beatAnalysisYieldMs(options, 90, 520));
-    frameBands.push(await makeFrameEnergy(snapPcm));
+    frameBands.push(await renderBandEnergy(1800, 9000));
     if (token !== beatMapToken || !frameBands[0] || !frameBands[1] || !frameBands[2] || !frameBands[3]) { hideBeatChip(); return null; }
     var energy = frameBands[0];
     var bodyEnergy = frameBands[1];
@@ -27037,6 +27028,8 @@ function getAdaptiveRenderFps() {
   if (clockFps) return clockFps;
   if (RENDER_VISIBLE_VSYNC) return 0;
   var tier = (typeof getRenderLoadTier === 'function') ? getRenderLoadTier() : 0;
+  // 沉浸式节奏分析期间给音频解码和 Electron 合成器留出余量，避免 GPU 黑帧；视觉层本身不降级。
+  if (immersiveMode && beatMapBusy) return tier >= 2 ? RENDER_HUGE_FPS : RENDER_LARGE_FPS;
   if (typeof isRenderInteractionActive === 'function' && isRenderInteractionActive()) {
     if (tier >= 2) return RENDER_INTERACTION_HUGE_FPS;
     if (tier >= 1) return RENDER_INTERACTION_LARGE_FPS;
