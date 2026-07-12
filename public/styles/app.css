@@ -106,7 +106,7 @@ body.desktop-shell.desktop-fullscreen #top-right{top:24px}
 
 /* ---------- 背景 ---------- */
 #custom-bg{position:fixed;inset:0;z-index:0;background:var(--custom-bg-color,#000);overflow:hidden;transition:background .35s ease}
-#custom-bg-video{position:absolute;inset:-1px;width:calc(100% + 2px);height:calc(100% + 2px);object-fit:cover;opacity:var(--custom-bg-video-opacity,0);filter:none;transform:scale(1.002);transition:opacity .35s ease;pointer-events:none;background:#000}
+#custom-bg-video{position:absolute;inset:-1px;width:calc(100% + 2px);height:calc(100% + 2px);object-fit:cover;opacity:var(--custom-bg-video-opacity,0);filter:none;transform:none;transition:none;pointer-events:none;background:#000}
 #custom-bg::before{content:'';position:absolute;inset:-1px;background-image:var(--custom-bg-image,none);background-size:cover;background-position:center;opacity:var(--custom-bg-image-opacity,0);filter:none;transform:scale(1.002);transition:opacity .35s ease,background-image .35s ease;pointer-events:none}
 #custom-bg::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.06),rgba(0,0,0,.16));opacity:var(--custom-bg-overlay-opacity,0);pointer-events:none}
 body.custom-background-override #custom-bg::after{background:linear-gradient(180deg,rgba(0,0,0,.018),rgba(0,0,0,.045))}
@@ -941,6 +941,7 @@ body.login-guide-active #login-guide-canvas{opacity:1}
 .login-platform-tabs button.active,.user-platform-tabs button.active{color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08),0 10px 26px rgba(0,0,0,.20)}
 .login-platform-tabs button.netease.active,.user-platform-tabs button.netease.active{background:rgba(217,91,103,.16);color:#ffd7dc}
 .login-platform-tabs button.qq.active,.user-platform-tabs button.qq.active{background:rgba(191,214,107,.16);color:#f3ffd1}
+.login-platform-tabs button.kugou.active,.user-platform-tabs button.kugou.active{background:rgba(68,199,255,.16);color:#d9f6ff}
 .user-platform-tabs button.both.active{background:rgba(244,210,138,.14);color:#fff0bf}
 .qr-shell{position:relative;width:200px;height:200px;margin:0 auto 16px;border-radius:16px}
 #qr-img{width:200px;height:200px;background:#fff;border-radius:14px;margin:0 auto 16px;display:block;padding:10px;box-shadow:0 16px 42px rgba(0,0,0,.32),0 0 0 1px rgba(244,210,138,.18)}
@@ -972,6 +973,7 @@ body.login-guide-active #login-guide-canvas{opacity:1}
 .account-provider-chip{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 9px;margin-bottom:10px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.035);font-size:10.5px;letter-spacing:.5px;color:rgba(255,255,255,.58)}
 .account-provider-chip.netease{border-color:rgba(217,91,103,.26);color:#ffd7dc;background:rgba(217,91,103,.08)}
 .account-provider-chip.qq{border-color:rgba(191,214,107,.26);color:#f3ffd1;background:rgba(191,214,107,.08)}
+.account-provider-chip.kugou{border-color:rgba(68,199,255,.26);color:#d9f6ff;background:rgba(68,199,255,.08)}
 .account-modal-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
 .account-modal-actions .modal-btn{padding:8px 10px}
 .account-hint{margin-top:10px;font-size:11px;line-height:1.45;color:rgba(255,255,255,.38)}
@@ -1341,6 +1343,9 @@ body.desktop-shell.diy-mode #bottom-bar.stage-mode{left:50%;width:min(1080px,cal
 .fx-seg button:last-child{border-right:none}
 .fx-seg button:hover{background:rgba(255,255,255,.05);color:#fff}
 .fx-seg button.active{background:rgba(0,245,212,.10);color:var(--fc-accent)}
+.fx-seg.lyric-scene-seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));overflow:visible}
+.fx-seg.lyric-scene-seg button{min-width:0}
+.fx-seg.lyric-scene-seg button:nth-child(3n){border-right:none}
 
 /* --- 高级折叠 --- */
 .fx-advanced{margin-top:16px;border:1px solid rgba(255,255,255,.055);border-radius:13px;padding:10px 12px;background:rgba(255,255,255,.022)}
@@ -1456,6 +1461,10 @@ body.desktop-shell.diy-mode #bottom-bar.stage-mode{left:50%;width:min(1080px,cal
 .pl-name{font-size:12px;color:rgba(255,255,255,.9);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pl-sub{font-size:10.5px;color:rgba(255,255,255,.42);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pl-section-label{margin:14px 2px 7px;font-size:10px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:rgba(0,245,212,.50)}
+.playlist-source-filter{display:flex;gap:6px;margin:8px 0 10px;padding:3px;border-radius:11px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.025)}
+.playlist-source-filter button{flex:1;min-width:0;height:28px;padding:0 8px;border-radius:8px;border:1px solid transparent;background:transparent;color:rgba(255,255,255,.46);font:700 10.5px/1 inherit;white-space:nowrap;cursor:pointer;transition:background .18s,border-color .18s,color .18s}
+.playlist-source-filter button:hover{color:rgba(255,255,255,.82);background:rgba(255,255,255,.045)}
+.playlist-source-filter button.active{color:#fff;border-color:rgba(var(--fc-accent-rgb),.30);background:rgba(var(--fc-accent-rgb),.10)}
 .pl-inline-detail{position:relative;margin:-1px 0 14px;padding:0 0 12px;scroll-margin-top:16px}
 .pl-detail-sticky{position:sticky;top:-10px;z-index:4;margin:0 -2px 10px;padding:8px 2px 10px;border-radius:14px;background:linear-gradient(180deg,rgba(14,17,24,.92),rgba(14,17,24,.76) 68%,rgba(14,17,24,0));backdrop-filter:blur(20px) saturate(1.18);-webkit-backdrop-filter:blur(20px) saturate(1.18)}
 .pl-detail-head{display:flex;align-items:center;gap:10px;margin:2px 0 10px;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,.06)}
@@ -1467,6 +1476,7 @@ body.desktop-shell.diy-mode #bottom-bar.stage-mode{left:50%;width:min(1080px,cal
 .pl-detail-play{height:30px;min-width:98px;padding:0 12px;border-radius:999px;border:1px solid rgba(var(--fc-accent-rgb),.32);background:rgba(var(--fc-accent-rgb),.10);color:#fff;font:700 11.5px var(--font-sans);display:inline-flex;align-items:center;justify-content:center;gap:7px;cursor:pointer}
 .pl-detail-play svg{width:13px;height:13px;fill:currentColor}
 .pl-detail-top-btn{height:30px;min-width:82px;flex:0 0 auto;padding:0 12px}
+.pl-detail-collapse-btn{height:30px;min-width:76px;flex:0 0 auto;padding:0 11px}
 .pl-detail-list{display:flex;flex-direction:column;gap:6px;scroll-behavior:smooth}
 .pl-detail-row{display:flex;align-items:center;gap:9px;padding:7px;border-radius:10px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.04);cursor:pointer}
 .pl-detail-row:hover{background:rgba(255,255,255,.055)}
@@ -1984,6 +1994,14 @@ html .home-hero .home-calendar-card{background:transparent!important;background-
 html .home-hero .home-calendar-card::before{opacity:0!important}
 .home-hero .home-calendar-time,.home-hero .home-calendar-year,.home-hero .home-calendar-daybox{background:transparent!important;box-shadow:none!important}
 .home-card-title,.home-card-sub,.home-card-label,.home-title,.home-sub,.home-kicker,.home-weather-pill,.home-calendar-time,.home-calendar-year,.home-calendar-daybox{ text-shadow:0 2px 16px rgba(0,0,0,.70),0 0 1px rgba(0,0,0,.82)}
+
+/* macOS Chromium can repeatedly rebuild the video/backdrop sampling surface when
+   an overlay appears. Keep the glass fill, border and shadow, but stop sampling
+   the moving video only for this exact platform/background combination. */
+body.desktop-mac.custom-background-video *{
+  backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
+}
 
 /* ============================================================ */
 /*  响应式                                                        */
