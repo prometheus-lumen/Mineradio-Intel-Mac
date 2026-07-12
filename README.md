@@ -1,7 +1,8 @@
 ![img_0.png](docs/assets/readme/img_0.png)
-
-## 基于Mineradio 针对Mac intel 进行优化 
-* 当前 Intel Mac 仓库及更新发布页：https://github.com/prometheus-lumen/Mineradio-Intel-Mac
+# 说明
+当前项目由于是属于视觉特效优先，采用three.js做视觉效果以及electron编译打包，所以安装包体积稍微会大一些且比较吃CPU、GPU资源，本人的配置是2019pro，16英寸 i7-32g 目前来说属于能用但不算卡顿，请判断电脑配置是否可用后再进行下载。
+## 基于Mineradio 针对Mac 进行优化 
+* 当前 Mac 仓库及更新发布页：https://github.com/prometheus-lumen/Mineradio-Mac
 * 如需官方源代码以及windows版本，请移步至原创作者：https://github.com/XxHuberrr/Mineradio
 
 ## 关于在mac上安装一些软件时，会提示如下弹框，导致无法安装。
